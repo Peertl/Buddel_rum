@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Buddel rum! (v0.2)</title>
+    <title>Buddel rum! (v0.3)</title>
     <style>
         body, html {
             margin: 0;
@@ -27,34 +27,31 @@
             overflow: hidden;
         }
 
-        /* Das kleinere 3x4 Raster mit mehr Rand */
+        /* Felder weiter oben platziert */
         #grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             grid-template-rows: repeat(4, 1fr);
-            width: 80%; /* Kleiner */
-            height: 60%; /* Kleiner */
+            width: 80%;
+            height: 55%; 
             position: absolute;
-            bottom: 5%; /* Mehr Abstand unten */
-            left: 10%; /* Mehr Abstand links */
+            top: 25%; /* Weiter nach oben verschoben */
+            left: 10%;
             z-index: 10;
-            pointer-events: none; /* Klicks gehen durch das Raster auf die Felder */
         }
 
         .field {
-            /* border: 1px dashed rgba(0,0,0,0.1); Zum Testen des Rasters einkommentieren */
+            /* border: 1px dashed rgba(0,0,0,0.3); /* Zum Testen einkommentieren */
             position: relative;
             cursor: pointer;
-            pointer-events: auto; /* Nur die Felder sind klickbar */
+            pointer-events: auto;
         }
 
-        /* Unser Buddel-Bursche */
         #schnabel {
             position: absolute;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            /* Wir steuern Position und Skalierung jetzt komplett per JS, keine CSS transition hier! */
+            width: 120px;
+            /* Transform origin unten Mitte, damit er beim Skalieren nicht "schwebt" */
+            transform-origin: bottom center;
             z-index: 20;
             pointer-events: none;
         }
@@ -94,194 +91,153 @@
     const schnabel = document.getElementById('schnabel');
     const schnabelImg = document.getElementById('schnabel-img');
     
-    // Start-Position: Oben links bei den Palmen (Feld 1)
-    let currentField = { x: 1, y: 1 }; 
-    const startFieldIdx = 1;
-    let currentPath = [];
+    // Status-Variablen
     let isMoving = false;
-    let animationTimer = null;
-    let walkStep = 0; // 0 or 1 for the alternating feet
-    let moveInterval = null;
+    let walkStep = 1;
+    let walkInterval = null;
+    let currentPath = [];
+    
+    // Schnabels exakte Position auf dem Bildschirm
+    let currentPos = { x: 0, y: 0, gridX: 1, gridY: 0 }; // gridY 0 = Start oberhalb Feld 1
 
-    // --- Skalierungs-Parameter ---
-    const scaleTop = 0.5; // Schnabel ist oben (y=1) nur 50% groß
-    const scaleBottom = 1.0; // Schnabel ist unten (y=4) 100% groß
+    // Wartet, bis das Layout geladen ist, um die Startposition zu berechnen
+    window.addEventListener('load', () => {
+        const field1 = document.querySelector('.field[data-index="1"]');
+        const coords = getFieldCenter(field1);
+        
+        // Startposition: Selbe X-Achse wie Feld 1, aber weiter oben (Y - 60px)
+        currentPos.x = coords.x;
+        currentPos.y = coords.y - 60; 
+        
+        updateSchnabelVisuals(currentPos.x, currentPos.y, currentPos.gridY);
+    });
 
-    // Funktion zum Aktualisieren von Schnabels Größe basierend auf seiner Y-Position
-    function updateSchnabelScale(y) {
-        const scaleRange = scaleBottom - scaleTop;
-        const currentScale = scaleTop + (scaleRange * ((y - 1) / 3)); // Normalisiert Y (1-4) auf 0-3
-        schnabel.style.transform = `scale(${currentScale}) translateX(-50%)`;
-        // Wir setzen die Breite explizit hoch, damit er beim Skalieren nicht schrumpft
-        schnabel.style.width = '120px'; 
-    }
-
-    // Setze Startposition und Skalierung
-    const startFieldEl = document.querySelector(`.field[data-index="${startFieldIdx}"]`);
-    moveSchnabelToFieldEl(startFieldEl, false); // false = keine Animation, sofort hinspringen
-    updateSchnabelScale(currentField.y);
-
-    // --- Bewegung- & Pfad-Logik ---
-
-    function getTargetCoordinates(fieldEl) {
+    // Berechnet die absolute Pixel-Mitte eines Feldes
+    function getFieldCenter(fieldEl) {
         const rect = fieldEl.getBoundingClientRect();
-        const containerRect = document.getElementById('game-container').getBoundingClientRect();
-        const targetX = rect.left - containerRect.left + (rect.width / 2);
-        const targetY = rect.top - containerRect.top + (rect.height / 1.5);
-        return { x: targetX, y: targetY };
+        const container = document.getElementById('game-container').getBoundingClientRect();
+        return {
+            x: rect.left - container.left + (rect.width / 2),
+            y: rect.top - container.top + (rect.height / 1.5)
+        };
     }
 
-    function moveSchnabelToFieldEl(fieldEl, animate = true) {
-        const coords = getTargetCoordinates(fieldEl);
-        schnabel.style.left = (coords.x) + 'px';
-        schnabel.style.top = (coords.y) + 'px';
-        currentField.x = parseInt(fieldEl.dataset.x);
-        currentField.y = parseInt(fieldEl.dataset.y);
-        updateSchnabelScale(currentField.y);
-    }
-
-    // Berechnet den Pfad, einschließlich Haken
-    function calculatePath(targetX, targetY) {
-        const startX = currentField.x;
-        const startY = currentField.y;
+    // Aktualisiert Position und Skalierung (klein = oben, groß = unten)
+    function updateSchnabelVisuals(pxX, pxY, gridY) {
+        // Skalierung von 0.45 (Start) bis 1.0 (Feld 4)
+        const scale = 0.45 + (gridY / 4) * 0.55; 
         
-        let path = [];
+        // Versatz um die halbe Breite, damit er mittig steht
+        schnabel.style.left = (pxX - 60) + 'px'; // 60 ist halbe Breite (120/2)
+        schnabel.style.top = (pxY - schnabel.offsetHeight) + 'px';
+        schnabel.style.transform = `scale(${scale})`;
+    }
 
-        // Prüfe, ob es ein horizontaler Weg ist (nur X-Unterschied, kein Y-Unterschied)
-        if (Math.abs(targetX - startX) > 0 && Math.abs(targetY - startY) == 0) {
-            console.log("Horizontaler Weg: Wir müssen einen Haken schlagen!");
-            // Haken über ein diagonal erreichbares Feld.
-            // Bevorzugt: Y-Position ändern, um Skalierungseffekt zu nutzen
-            const pivotY = startY < 4 ? startY + 1 : startY - 1; // Wenn möglich nach unten, sonst nach oben
-            
-            // Wir fügen ein Zwischenfeld hinzu
-            const pivotField = document.querySelector(`.field[data-x="${targetX}"][data-y="${pivotY}"]`);
-            if(pivotField) {
-                path.push(pivotField);
-            }
-        }
+    // --- Lauf-Animation ---
+    function startWalkAnimation(fromX, fromY, toX, toY) {
+        clearInterval(walkInterval);
         
-        // Prüfe, ob es ein vertikaler Weg ist (nur Y-Unterschied, kein X-Unterschied)
-        else if (Math.abs(targetX - startX) == 0 && Math.abs(targetY - startY) > 0) {
-            console.log("Vertikaler Weg: Wir müssen einen Haken schlagen!");
-            // Haken über ein diagonal erreichbares Feld.
-            const pivotX = startX < 3 ? startX + 1 : startX - 1;
-            
-            // Wir fügen ein Zwischenfeld hinzu
-            const pivotField = document.querySelector(`.field[data-x="${pivotX}"][data-y="${targetY}"]`);
-            if(pivotField) {
-                path.push(pivotField);
-            }
-        }
+        // Richtung bestimmen anhand der Pixel-Bewegung
+        let direction = "";
+        if (toY < fromY) direction += "zurück_";
+        if (toX < fromX) direction += "links";
+        else direction += "rechts";
 
-        // Am Ende immer das endgültige Ziel hinzufügen
-        const targetField = document.querySelector(`.field[data-x="${targetX}"][data-y="${targetY}"]`);
-        path.push(targetField);
-        
-        return path;
-    }
-
-    // --- Sprite-Animation ---
-    function setSchnabelImage(state, direction, step) {
-        let filename = 'Schnabel_stehend.png';
-        if (state == 'laufend') {
-            filename = `Schnabel_laufend_${direction}_${step}.png`;
-        }
-        schnabelImg.src = filename;
-    }
-
-    function determineDirection(startX, startY, targetX, targetY) {
-        if (targetX < startX) {
-            return targetY < startY ? 'zurück_links' : 'links';
-        } else {
-            return targetY < startY ? 'zurück_rechts' : 'rechts';
-        }
-    }
-
-    function startWalkAnimation(direction) {
-        clearInterval(animationTimer);
-        animationTimer = setInterval(() => {
-            walkStep = (walkStep + 1) % 2 + 1; // Wechsle 1, 2, 1, 2...
-            setSchnabelImage('laufend', direction, walkStep);
-        }, 150); // Beine wechseln alle 150ms
+        walkInterval = setInterval(() => {
+            walkStep = walkStep === 1 ? 2 : 1;
+            schnabelImg.src = `Schnabel_laufend_${direction}_${walkStep}.png`;
+        }, 80); // Schneller! (80ms)
     }
 
     function stopWalkAnimation() {
-        clearInterval(animationTimer);
-        setSchnabelImage('stehend', null, null);
-        walkStep = 0;
+        clearInterval(walkInterval);
+        schnabelImg.src = 'Schnabel_stehend.png';
+        walkStep = 1;
     }
 
-    // --- Bewegung-Steuerung ---
-    function startMovement() {
-        if (currentPath.length == 0 || isMoving) return;
-
-        isMoving = true;
-        const nextField = currentPath.shift(); // Hol das erste Feld im Pfad
+    // --- Wegfindung (Der Haken) ---
+    function calculatePath(targetGridX, targetGridY) {
+        let path = [];
         
-        const targetCoords = getTargetCoordinates(nextField);
-        const direction = determineDirection(currentField.x, currentField.y, parseInt(nextField.data_x), parseInt(nextField.data_y));
-        startWalkAnimation(direction);
+        // Wenn es geradeaus horizontal oder vertikal geht, baue einen Haken ein
+        if (currentPos.gridX === targetGridX && currentPos.gridY !== targetGridY) {
+            // Vertikaler Lauf -> Ausweichschritt zur Seite
+            let pivotX = targetGridX === 3 ? 2 : targetGridX + 1;
+            let pivotY = Math.max(1, Math.floor((currentPos.gridY + targetGridY) / 2));
+            path.push({ x: pivotX, y: pivotY });
+        } else if (currentPos.gridY === targetGridY && currentPos.gridX !== targetGridX) {
+            // Horizontaler Lauf -> Ausweichschritt nach unten/oben
+            let pivotY = targetGridY === 4 ? 3 : targetGridY + 1;
+            let pivotX = Math.floor((currentPos.gridX + targetGridX) / 2);
+            path.push({ x: pivotX, y: pivotY });
+        }
 
-        // Wir nutzen JavaScript, um die Bewegung weich zu animieren, nicht CSS transitions.
-        const duration = 1500; // Dauer pro Pfadsegment (Haken) in ms
-        const startTime = performance.now();
-        const startXCoords = parseInt(schnabel.style.left);
-        const startYCoords = parseInt(schnabel.style.top);
-        const startYGrid = currentField.y;
-        const targetYGrid = parseInt(nextField.dataset.y);
-
-        moveInterval = setInterval(() => {
-            const now = performance.now();
-            const elapsed = now - startTime;
-            const progress = Math.min(elapsed / duration, 1);
-            
-            // Berechne Zwischenposition
-            const currentX = startXCoords + (targetCoords.x - startXCoords) * progress;
-            const currentY = startYCoords + (targetCoords.y - startYCoords) * progress;
-            const currentYGridPosition = startYGrid + (targetYGrid - startYGrid) * progress;
-
-            // Update Position & Skalierung
-            schnabel.style.left = currentX + 'px';
-            schnabel.style.top = currentY + 'px';
-            updateSchnabelScale(currentYGridPosition);
-
-            if (progress === 1) {
-                // Segment erreicht
-                clearInterval(moveInterval);
-                currentField.x = parseInt(nextField.dataset.x);
-                currentField.y = parseInt(nextField.dataset.y);
-
-                if (currentPath.length > 0) {
-                    // Es gibt einen Haken, mach weiter
-                    isMoving = false;
-                    startMovement();
-                } else {
-                    // Ziel erreicht!
-                    stopWalkAnimation();
-                    isMoving = false;
-                    console.log("Schnabel ist angekommen auf Feld: " + nextField.dataset.index);
-                    // Hier kommt später der Buddel-Aufruf hin!
-                }
-            }
-        }, 1000 / 60); // 60 FPS update
+        // Endziel hinzufügen
+        path.push({ x: targetGridX, y: targetGridY });
+        return path;
     }
 
-    // --- Event Listener ---
+    // --- Bewegungsschleife ---
+    function moveNextSegment() {
+        if (currentPath.length === 0) {
+            isMoving = false;
+            stopWalkAnimation();
+            console.log("Angekommen!");
+            // HIER KOMMT SPÄTER DER BUDDEL-AUFRUF
+            return;
+        }
+
+        const nextTarget = currentPath.shift();
+        const fieldEl = document.querySelector(`.field[data-x="${nextTarget.x}"][data-y="${nextTarget.y}"]`);
+        const targetCoords = getFieldCenter(fieldEl);
+
+        startWalkAnimation(currentPos.x, currentPos.y, targetCoords.x, targetCoords.y);
+
+        const startX = currentPos.x;
+        const startY = currentPos.y;
+        const startGridY = currentPos.gridY;
+        const targetGridY = nextTarget.y;
+        
+        const duration = 1200; // 1.2 Sekunden pro Teilstrecke
+        let startTime = null;
+
+        function animate(time) {
+            if (!startTime) startTime = time;
+            const elapsed = time - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+
+            // Interpolation der Werte
+            currentPos.x = startX + (targetCoords.x - startX) * progress;
+            currentPos.y = startY + (targetCoords.y - startY) * progress;
+            const currentGridYAnim = startGridY + (targetGridY - startGridY) * progress;
+
+            updateSchnabelVisuals(currentPos.x, currentPos.y, currentGridYAnim);
+
+            if (progress < 1) {
+                requestAnimationFrame(animate);
+            } else {
+                currentPos.gridX = nextTarget.x;
+                currentPos.gridY = targetGridY;
+                moveNextSegment(); // Nächstes Stück vom Pfad ablaufen
+            }
+        }
+        requestAnimationFrame(animate);
+    }
+
+    // Klick-Ereignisse
     fields.forEach(field => {
         field.addEventListener('click', (e) => {
-            if (isMoving) return; // Klicke blockieren, wenn er läuft
+            if (isMoving) return;
 
-            const targetX = parseInt(e.target.dataset.x);
-            const targetY = parseInt(e.target.dataset.y);
+            const tX = parseInt(e.target.dataset.x);
+            const tY = parseInt(e.target.dataset.y);
 
-            console.log(`Klick auf Feld ${e.target.dataset.index} (x:${targetX}, y:${targetY})`);
+            // Verhindern, dass er auf das gleiche Feld klickt, auf dem er steht
+            if(tX === currentPos.gridX && tY === currentPos.gridY) return;
 
-            // Berechne den Pfad (inklusive Haken)
-            currentPath = calculatePath(targetX, targetY);
-            
-            // Starte die Bewegung
-            startMovement();
+            isMoving = true;
+            currentPath = calculatePath(tX, tY);
+            moveNextSegment();
         });
     });
 </script>
