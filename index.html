@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Buddel rum! (v0.6)</title>
+    <title>Buddel rum! (v0.7)</title>
     <style>
         body, html {
             margin: 0;
@@ -85,7 +85,7 @@
             pointer-events: auto;
         }
 
-        /* DER NEUE ANKERPUNKT: 0x0 Pixel, bewegt sich über den Sand */
+        /* DER ANKERPUNKT: 0x0 Pixel, bewegt sich über den Sand */
         #schnabel {
             position: absolute;
             width: 0;
@@ -109,7 +109,8 @@
 <body>
 
 <div id="loading-screen">
-    <h1>Expedition startet...</h1>
+    <h1>Expedition startet...
+</h1>
     <div class="progress-bar-container">
         <div id="progress-bar"></div>
     </div>
@@ -169,6 +170,7 @@
     let isMoving = false;
     let walkStep = 1;
     let walkInterval = null;
+    let currentDirection = null; // Speichert die Laufrichtung
     
     // Start über Feld 1
     let currentGridPos = { x: 1, y: 0.5 }; 
@@ -197,53 +199,62 @@
     }
 
     function updateSchnabelVisuals(pxX, pxY) {
-        // Exakte Y-Referenzpunkte auf dem Grid
-        const yTop = getPixelCoordsFromGrid(1, 1).y;
-        const yBottom = getPixelCoordsFromGrid(1, 4).y;
+        // Exakte Y-Referenzpunkte auf dem Grid: Startposition (y0.5) und Feld 4 (y4.0)
+        const yStart = getPixelCoordsFromGrid(1, 0.5).y;
+        const yBottom4 = getPixelCoordsFromGrid(1, 4.0).y;
         
-        // Berechnung: Wieviel Prozent ist er vom obersten zum untersten Feld fortgeschritten?
-        let progress = (pxY - yTop) / (yBottom - yTop);
+        // Berechnung: Wieviel Prozent ist er vom Start bis zum untersten Feld fortgeschritten?
+        let progressFromStart = (pxY - yStart) / (yBottom4 - yStart);
+        progressFromStart = Math.max(0, Math.min(1, progressFromStart)); 
         
-        // Skalierung: Feld 1 (oben) = 0.40, Feld 4 (unten) = 1.00
-        const scale = 0.40 + (progress * 0.60); 
+        // Skalierung: Oben (Start-gY=0.5) = 0.50, Unten (Feld 4-gY=4.0) = 1.00
+        const scaleBase = 0.50 + (progressFromStart * 0.50); 
+        let finalScale = scaleBase;
+
+        // --- Korrekturfaktor für Rückwärts-Bilder ---
+        // Wenn Schnabel nach hinten läuft, verkleinern wir das Bild zusätzlich, 
+        // um visuelle Unterschiede der Bilder auszugleichen.
+        if (currentDirection && currentDirection.startsWith('zurück_')) {
+            finalScale = scaleBase * 0.85; // Visuell um 15 % verkleinern
+        }
 
         // Setze den Ankerpunkt exakt auf die Pixel-Koordinate
         schnabel.style.left = pxX + 'px'; 
         schnabel.style.top = pxY + 'px'; 
         
         // Skaliere das Bild relativ zu diesem Anker
-        schnabelImg.style.transform = `scale(${Math.max(0.2, scale)})`; // Math.max schützt vor negativer Skalierung
+        schnabelImg.style.transform = `scale(${Math.max(0.1, finalScale)})`; 
         
-        return scale; 
+        return scaleBase; // Wir geben die korrekte Basis-Skalierung für die Geschwindigkeit zurück
     }
 
     function startWalkAnimation(fromX, fromY, toX, toY) {
         clearInterval(walkInterval);
         
-        let direction = "";
+        currentDirection = "";
         let dx = toX - fromX;
         let dy = toY - fromY;
 
         if (Math.abs(dx) < 1) { 
             // Vertikal
-            if (dy < 0) direction = "zurück_rechts"; 
-            else direction = "rechts";               
+            if (dy < 0) currentDirection = "zurück_rechts"; 
+            else currentDirection = "rechts";               
         } else if (dx < 0) {
             // Links
-            if (dy < 0) direction = "zurück_links";  
-            else direction = "links";                
+            if (dy < 0) currentDirection = "zurück_links";  
+            else currentDirection = "links";                
         } else {
             // Rechts
-            if (dy < 0) direction = "zurück_rechts"; 
-            else direction = "rechts";               
+            if (dy < 0) currentDirection = "zurück_rechts"; 
+            else currentDirection = "rechts";               
         }
 
         walkStep = 1;
-        schnabelImg.src = `Schnabel_laufend_${direction}_${walkStep}.png`;
+        schnabelImg.src = `Schnabel_laufend_${currentDirection}_${walkStep}.png`;
 
         walkInterval = setInterval(() => {
             walkStep = walkStep === 1 ? 2 : 1;
-            schnabelImg.src = `Schnabel_laufend_${direction}_${walkStep}.png`;
+            schnabelImg.src = `Schnabel_laufend_${currentDirection}_${walkStep}.png`;
         }, 180); 
     }
 
@@ -251,6 +262,7 @@
         clearInterval(walkInterval);
         schnabelImg.src = 'Schnabel_stehend.png';
         walkStep = 1;
+        currentDirection = null; // Richtung zurücksetzen
     }
 
     function moveToTarget(targetX, targetY) {
@@ -264,11 +276,11 @@
         
         const distance = Math.sqrt(Math.pow(targetCoords.x - startX, 2) + Math.pow(targetCoords.y - startY, 2));
         
-        const startScale = updateSchnabelVisuals(startX, startY);
-        const endScale = updateSchnabelVisuals(targetCoords.x, targetCoords.y);
-        const avgScale = (startScale + endScale) / 2;
+        const startScaleBase = updateSchnabelVisuals(startX, startY);
+        const endScaleBase = updateSchnabelVisuals(targetCoords.x, targetCoords.y);
+        const avgScaleBase = (startScaleBase + endScaleBase) / 2;
         
-        const duration = (distance * 6) / avgScale; 
+        const duration = (distance * 6) / avgScaleBase; 
         
         let startTime = null;
 
@@ -280,6 +292,7 @@
             const currentPxX = startX + (targetCoords.x - startX) * progress;
             const currentPxY = startY + (targetCoords.y - startY) * progress;
 
+            // Übergibt die aktuelle Pixel-Position und die aktuelle Richtung
             updateSchnabelVisuals(currentPxX, currentPxY);
 
             if (progress < 1) {
@@ -289,7 +302,11 @@
                 currentGridPos.y = targetY;
                 isMoving = false;
                 stopWalkAnimation();
-                console.log("Exakt und ohne Ruckler am Ziel angekommen!");
+                // Damit er nach dem Stop die korrekte Größe ohne Korrekturfaktor hat:
+                const finalCoords = getPixelCoordsFromGrid(targetX, targetY);
+                updateSchnabelVisuals(finalCoords.x, finalCoords.y);
+                console.log("Perfekt und ohne Ruckler am Ziel angekommen!");
+                // HIER KOMMT DIE BUDDEL-ANIMATION HIN
             }
         }
         requestAnimationFrame(animate);
