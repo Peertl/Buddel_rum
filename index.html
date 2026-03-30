@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Buddel rum! (v0.7)</title>
+    <title>Buddel rum! (v0.8)</title>
     <style>
         body, html {
             margin: 0;
@@ -85,7 +85,18 @@
             pointer-events: auto;
         }
 
-        /* DER ANKERPUNKT: 0x0 Pixel, bewegt sich über den Sand */
+        /* Das Loch auf dem Feld */
+        .loch-img {
+            position: absolute;
+            bottom: 10%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80%;
+            pointer-events: none; /* Klicks gehen durch das Loch hindurch */
+            z-index: 5;
+        }
+
+        /* DER ANKERPUNKT */
         #schnabel {
             position: absolute;
             width: 0;
@@ -94,23 +105,63 @@
             pointer-events: none;
         }
 
-        /* DAS BILD: Richtet sich stur mit der unteren Mitte am Ankerpunkt aus */
+        /* DAS BILD */
         #schnabel img {
             position: absolute;
             bottom: 0;
-            left: -60px; /* Exakt die Hälfte der 120px Breite nach links schieben */
+            left: -60px; 
             width: 120px;
             height: auto;
             transform-origin: bottom center;
             display: block;
+        }
+
+        /* --- UI Elemente --- */
+        #ui-layer {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            z-index: 30;
+        }
+
+        #btn-buddeln {
+            font-family: 'Comic Sans MS', sans-serif;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #fff;
+            background-color: #8b5a2b;
+            border: 4px solid #5a3d17;
+            border-radius: 15px;
+            padding: 10px 40px;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            text-shadow: 2px 2px 0px #5a3d17;
+            transition: all 0.2s ease;
+        }
+
+        #btn-buddeln:active:not(:disabled) {
+            transform: scale(0.95);
+            box-shadow: 0 2px 3px rgba(0,0,0,0.3);
+        }
+
+        #btn-buddeln:disabled {
+            background-color: #b09a83;
+            border-color: #8c7b69;
+            color: #e0d6cb;
+            cursor: not-allowed;
+            text-shadow: none;
+            box-shadow: none;
+            transform: none;
         }
     </style>
 </head>
 <body>
 
 <div id="loading-screen">
-    <h1>Expedition startet...
-</h1>
+    <h1>Expedition startet...</h1>
     <div class="progress-bar-container">
         <div id="progress-bar"></div>
     </div>
@@ -135,15 +186,23 @@
     <div id="schnabel">
         <img id="schnabel-img" src="Schnabel_stehend.png" alt="Schnabel">
     </div>
+
+    <div id="ui-layer">
+        <button id="btn-buddeln" disabled>Buddeln</button>
+    </div>
 </div>
 
 <script>
+    // --- Preloader inkl. neuer Bilder ---
     const imagesToLoad = [
         'Hintergrund.png', 'Schnabel_stehend.png',
         'Schnabel_laufend_links_1.png', 'Schnabel_laufend_links_2.png',
         'Schnabel_laufend_rechts_1.png', 'Schnabel_laufend_rechts_2.png',
         'Schnabel_laufend_zurück_links_1.png', 'Schnabel_laufend_zurück_links_2.png',
-        'Schnabel_laufend_zurück_rechts_1.png', 'Schnabel_laufend_zurück_rechts_2.png'
+        'Schnabel_laufend_zurück_rechts_1.png', 'Schnabel_laufend_zurück_rechts_2.png',
+        'Schnabel_rauchend_1.png', 'Schnabel_rauchend_2.png',
+        'Buddel-Bursche_buddelnd-1.png', 'Buddel-Bursche_buddelnd-2.png',
+        'Buddel-Bursche-Hurra.png', 'Loch.png'
     ];
     let loadedImages = 0;
 
@@ -162,19 +221,29 @@
         img.src = src;
     });
 
+    // --- Spiel Variablen ---
     const fields = document.querySelectorAll('.field');
-    const schnabel = document.getElementById('schnabel'); // Der Anker-Div
-    const schnabelImg = document.getElementById('schnabel-img'); // Das Bild im Div
+    const schnabel = document.getElementById('schnabel');
+    const schnabelImg = document.getElementById('schnabel-img');
     const gridEl = document.getElementById('grid');
+    const btnBuddeln = document.getElementById('btn-buddeln');
     
     let isMoving = false;
+    let isDigging = false; // Blockiert alles, wenn er buddelt/jubelt
     let walkStep = 1;
     let walkInterval = null;
-    let currentDirection = null; // Speichert die Laufrichtung
+    let currentDirection = null; 
     
-    // Start über Feld 1
-    let currentGridPos = { x: 1, y: 0.5 }; 
+    // Status-Tracking
+    let currentGridPos = { x: 1, y: 0.5 }; // Start
+    let dugFields = new Set(); // Speichert, wo schon Löcher sind (Format: "x-y")
 
+    // Timer Variablen
+    let idleTimer = null;
+    let smokeInterval = null;
+    let digActionInterval = null;
+
+    // --- Initialisierung ---
     function initGame() {
         document.getElementById('loading-screen').style.display = 'none';
         document.getElementById('game-container').style.display = 'block';
@@ -182,52 +251,133 @@
         setTimeout(() => {
             const startCoords = getPixelCoordsFromGrid(currentGridPos.x, currentGridPos.y);
             updateSchnabelVisuals(startCoords.x, startCoords.y);
+            updateButtonState();
         }, 50);
     }
 
     function getPixelCoordsFromGrid(gX, gY) {
         const rect = gridEl.getBoundingClientRect();
         const container = document.getElementById('game-container').getBoundingClientRect();
-        
         const cellWidth = rect.width / 3;
         const cellHeight = rect.height / 4;
-
         const pxX = (rect.left - container.left) + (gX - 0.5) * cellWidth;
         const pxY = (rect.top - container.top) + (gY - 0.5) * cellHeight;
-        
         return { x: pxX, y: pxY };
     }
 
     function updateSchnabelVisuals(pxX, pxY) {
-        // Exakte Y-Referenzpunkte auf dem Grid: Startposition (y0.5) und Feld 4 (y4.0)
         const yStart = getPixelCoordsFromGrid(1, 0.5).y;
         const yBottom4 = getPixelCoordsFromGrid(1, 4.0).y;
         
-        // Berechnung: Wieviel Prozent ist er vom Start bis zum untersten Feld fortgeschritten?
         let progressFromStart = (pxY - yStart) / (yBottom4 - yStart);
         progressFromStart = Math.max(0, Math.min(1, progressFromStart)); 
         
-        // Skalierung: Oben (Start-gY=0.5) = 0.50, Unten (Feld 4-gY=4.0) = 1.00
         const scaleBase = 0.50 + (progressFromStart * 0.50); 
         let finalScale = scaleBase;
 
-        // --- Korrekturfaktor für Rückwärts-Bilder ---
-        // Wenn Schnabel nach hinten läuft, verkleinern wir das Bild zusätzlich, 
-        // um visuelle Unterschiede der Bilder auszugleichen.
         if (currentDirection && currentDirection.startsWith('zurück_')) {
-            finalScale = scaleBase * 0.85; // Visuell um 15 % verkleinern
+            finalScale = scaleBase * 0.85; 
         }
 
-        // Setze den Ankerpunkt exakt auf die Pixel-Koordinate
         schnabel.style.left = pxX + 'px'; 
         schnabel.style.top = pxY + 'px'; 
-        
-        // Skaliere das Bild relativ zu diesem Anker
         schnabelImg.style.transform = `scale(${Math.max(0.1, finalScale)})`; 
         
-        return scaleBase; // Wir geben die korrekte Basis-Skalierung für die Geschwindigkeit zurück
+        return scaleBase; 
     }
 
+    // --- Timer Logik (Idle & Rauchen) ---
+    function stopAllTimers() {
+        clearTimeout(idleTimer);
+        clearInterval(smokeInterval);
+        clearInterval(digActionInterval);
+    }
+
+    function startIdleTimer() {
+        stopAllTimers();
+        // Nicht rauchen, wenn am Startpunkt (0.5)
+        if (currentGridPos.y === 0.5) return;
+
+        idleTimer = setTimeout(() => {
+            startSmoking();
+        }, 3000); // 3 Sekunden warten
+    }
+
+    function startSmoking() {
+        let smokeStep = 1;
+        schnabelImg.src = `Schnabel_rauchend_${smokeStep}.png`;
+
+        smokeInterval = setInterval(() => {
+            smokeStep = smokeStep === 1 ? 2 : 1;
+            schnabelImg.src = `Schnabel_rauchend_${smokeStep}.png`;
+        }, 2000); // Alle 2 Sekunden wechseln
+    }
+
+    // --- UI Update ---
+    function updateButtonState() {
+        const fieldKey = `${currentGridPos.x}-${currentGridPos.y}`;
+        // Aktiv, wenn nicht in Bewegung, nicht am Buddeln, nicht am Start und Feld noch nicht gebuddelt
+        if (!isMoving && !isDigging && currentGridPos.y !== 0.5 && !dugFields.has(fieldKey)) {
+            btnBuddeln.disabled = false;
+        } else {
+            btnBuddeln.disabled = true;
+        }
+    }
+
+    // --- Buddel-Action ---
+    btnBuddeln.addEventListener('click', () => {
+        if (btnBuddeln.disabled) return;
+        
+        isDigging = true;
+        updateButtonState(); // Deaktiviert Button sofort
+        stopAllTimers(); // Stoppt Rauchen etc.
+
+        let digStep = 1;
+        schnabelImg.src = `Buddel-Bursche_buddelnd-${digStep}.png`;
+        
+        let digTime = 0;
+        
+        // Buddel-Interval: Alle 0.5s wechseln für 4s
+        digActionInterval = setInterval(() => {
+            digStep = digStep === 1 ? 2 : 1;
+            schnabelImg.src = `Buddel-Bursche_buddelnd-${digStep}.png`;
+            digTime += 500;
+
+            // Nach 4 Sekunden (4000ms) aufhören
+            if (digTime >= 4000) {
+                clearInterval(digActionInterval);
+                finishDigging();
+            }
+        }, 500);
+    });
+
+    function finishDigging() {
+        // 1. Loch platzieren
+        const fieldKey = `${currentGridPos.x}-${currentGridPos.y}`;
+        dugFields.add(fieldKey); // In Set eintragen
+        
+        const fieldEl = document.querySelector(`.field[data-x="${currentGridPos.x}"][data-y="${currentGridPos.y}"]`);
+        const lochImg = document.createElement('img');
+        lochImg.src = 'Loch.png';
+        lochImg.className = 'loch-img';
+        fieldEl.appendChild(lochImg);
+
+        // 2. Hurra Pose
+        schnabelImg.src = 'Buddel-Bursche-Hurra.png';
+
+        // 3. Nach 3 Sekunden aufstehen und Idle Timer starten
+        setTimeout(() => {
+            schnabelImg.src = 'Schnabel_stehend.png';
+            isDigging = false;
+            updateButtonState();
+            startIdleTimer(); // Nach weiteren 3s fängt er an zu rauchen
+            
+            // HIER KOMMT SPÄTER DER FUND-SCREEN (Schatz/Niete) HIN!
+
+        }, 3000);
+    }
+
+    // --- Lauf-Animation ---
     function startWalkAnimation(fromX, fromY, toX, toY) {
         clearInterval(walkInterval);
         
@@ -236,15 +386,12 @@
         let dy = toY - fromY;
 
         if (Math.abs(dx) < 1) { 
-            // Vertikal
             if (dy < 0) currentDirection = "zurück_rechts"; 
             else currentDirection = "rechts";               
         } else if (dx < 0) {
-            // Links
             if (dy < 0) currentDirection = "zurück_links";  
             else currentDirection = "links";                
         } else {
-            // Rechts
             if (dy < 0) currentDirection = "zurück_rechts"; 
             else currentDirection = "rechts";               
         }
@@ -262,10 +409,13 @@
         clearInterval(walkInterval);
         schnabelImg.src = 'Schnabel_stehend.png';
         walkStep = 1;
-        currentDirection = null; // Richtung zurücksetzen
+        currentDirection = null; 
     }
 
     function moveToTarget(targetX, targetY) {
+        stopAllTimers(); // Bricht Rauchen sofort ab!
+        updateButtonState();
+
         const startCoords = getPixelCoordsFromGrid(currentGridPos.x, currentGridPos.y);
         const targetCoords = getPixelCoordsFromGrid(targetX, targetY);
 
@@ -273,13 +423,10 @@
 
         const startX = startCoords.x;
         const startY = startCoords.y;
-        
         const distance = Math.sqrt(Math.pow(targetCoords.x - startX, 2) + Math.pow(targetCoords.y - startY, 2));
-        
         const startScaleBase = updateSchnabelVisuals(startX, startY);
         const endScaleBase = updateSchnabelVisuals(targetCoords.x, targetCoords.y);
         const avgScaleBase = (startScaleBase + endScaleBase) / 2;
-        
         const duration = (distance * 6) / avgScaleBase; 
         
         let startTime = null;
@@ -292,7 +439,6 @@
             const currentPxX = startX + (targetCoords.x - startX) * progress;
             const currentPxY = startY + (targetCoords.y - startY) * progress;
 
-            // Übergibt die aktuelle Pixel-Position und die aktuelle Richtung
             updateSchnabelVisuals(currentPxX, currentPxY);
 
             if (progress < 1) {
@@ -302,19 +448,21 @@
                 currentGridPos.y = targetY;
                 isMoving = false;
                 stopWalkAnimation();
-                // Damit er nach dem Stop die korrekte Größe ohne Korrekturfaktor hat:
                 const finalCoords = getPixelCoordsFromGrid(targetX, targetY);
                 updateSchnabelVisuals(finalCoords.x, finalCoords.y);
-                console.log("Perfekt und ohne Ruckler am Ziel angekommen!");
-                // HIER KOMMT DIE BUDDEL-ANIMATION HIN
+                
+                updateButtonState();
+                startIdleTimer(); // Startet den 3s Idle Timer auf dem neuen Feld
             }
         }
         requestAnimationFrame(animate);
     }
 
+    // --- Klick Events Grid ---
     fields.forEach(field => {
         field.addEventListener('click', (e) => {
-            if (isMoving) return;
+            // Keine Bewegung erlauben, wenn er sich schon bewegt oder gerade voll in Action ist (Buddeln/Jubeln)
+            if (isMoving || isDigging) return;
 
             const tX = parseInt(e.target.dataset.x);
             const tY = parseInt(e.target.dataset.y);
