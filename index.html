@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Buddel rum! (v0.19)</title>
+    <title>Buddel rum! (v0.20)</title>
     <style>
         body, html {
             margin: 0;
@@ -91,7 +91,6 @@
             transform-origin: bottom center;
             pointer-events: none;
             z-index: 5;
-            /* transform wird vom JavaScript gesetzt (inklusive scale und scaleX(-1)) */
         }
 
         /* --- DER ANKERPUNKT --- */
@@ -101,7 +100,6 @@
             height: 0;
             z-index: 20;
             pointer-events: none;
-            /* Basis-Korrekturen (Überschreibbar je nach Bild) */
             --shift-x: -50%;
             --shift-y: 0%;
             --scale-correction: 1;
@@ -114,45 +112,43 @@
             transform-origin: bottom center;
         }
 
-        /* --- DAS BILD (Logik aus v0.12 mit scale-correction) --- */
+        /* --- DAS BILD --- */
         #schnabel-img {
             position: absolute;
             bottom: 0;
-            width: 120px; /* Zurück zur festen Breite! */
-            height: auto;
-            /* transform wendet die Skalierung UND die CSS-Verschiebungen an */
+            height: 180px; /* Feste Höhe, hält die Bounding-Box stabil! */
+            width: auto;
             transform: translate(var(--shift-x), var(--shift-y)) scale(var(--scale-correction)); 
             transform-origin: bottom center;
             display: block;
-            /* Transition glättet nur den Übergang, kaschiert aber keine fundamentalen Größenunterschiede mehr */
-            transition: transform 0.1s ease-in-out; 
+            transition: transform 0.1s ease-in-out;
         }
 
-        /* * --- CSS-PERFEKTIONS-KORREKTUREN (v0.19) --- * */
+        /* * --- CSS-PERFEKTIONS-KORREKTUREN (v0.20) --- * */
         
         /* Stehen */
         #schnabel[data-sprite="stehend"] { --shift-x: -50%; --scale-correction: 1; }
 
-        /* Rauchen: Bild 2 ist breiter durch den Rauch rechts. Schwerpunkt nach links korrigieren! */
-        #schnabel[data-sprite="rauchend_1"] { --shift-x: -50%; --scale-correction: 1; }
-        #schnabel[data-sprite="rauchend_2"] { --shift-x: -40%; --scale-correction: 1.05; } /* Minimaler Scale gegen Zappeln, Offset korrigiert */
+        /* Rauchen: Größe vergrößert (1.15), damit er nicht schrumpft. Bild 2 nach LINKS (-60%) korrigiert! */
+        #schnabel[data-sprite="rauchend_1"] { --shift-x: -50%; --scale-correction: 1.15; }
+        #schnabel[data-sprite="rauchend_2"] { --shift-x: -60%; --scale-correction: 1.15; }
 
-        /* Laufen Vorwärts & Seitwärts (Kein Wechsel mehr im Shift-X = Kein Ruckeln mehr!) */
-        #schnabel[data-sprite="laufend_links_1"] { --shift-x: -48%; --scale-correction: 1; }
-        #schnabel[data-sprite="laufend_links_2"] { --shift-x: -52%; --scale-correction: 1; }
-        #schnabel[data-sprite="laufend_rechts_1"] { --shift-x: -52%; --scale-correction: 1; }
-        #schnabel[data-sprite="laufend_rechts_2"] { --shift-x: -48%; --scale-correction: 1; }
+        /* Laufen Vorwärts & Seitwärts */
+        #schnabel[data-sprite="laufend_links_1"] { --shift-x: -50%; --scale-correction: 1; }
+        #schnabel[data-sprite="laufend_links_2"] { --shift-x: -50%; --scale-correction: 1; }
+        #schnabel[data-sprite="laufend_rechts_1"] { --shift-x: -50%; --scale-correction: 1; }
+        #schnabel[data-sprite="laufend_rechts_2"] { --shift-x: -50%; --scale-correction: 1; }
 
-        /* Laufen Zurück: Fast Normalgröße (0.96), um den Pop-Effekt am Ende zu verhindern */
-        #schnabel[data-sprite="laufend_zurück_links_1"] { --shift-x: -49%; --scale-correction: 0.96; }
-        #schnabel[data-sprite="laufend_zurück_links_2"] { --shift-x: -51%; --scale-correction: 0.96; }
+        /* Laufen Zurück */
+        #schnabel[data-sprite="laufend_zurück_links_1"] { --shift-x: -50%; --scale-correction: 0.96; }
+        #schnabel[data-sprite="laufend_zurück_links_2"] { --shift-x: -50%; --scale-correction: 0.96; }
         #schnabel[data-sprite="laufend_zurück_rechts_1"] { --shift-x: -50%; --scale-correction: 0.96; }
         #schnabel[data-sprite="laufend_zurück_rechts_2"] { --shift-x: -50%; --scale-correction: 0.96; }
 
-        /* Buddeln & Hurra (Sitzend): Da er sitzt, ist er kleiner. Skalierung 0.85 */
-        #schnabel[data-sprite="buddelnd_1"] { --shift-x: -50%; --scale-correction: 0.85; }
-        #schnabel[data-sprite="buddelnd_2"] { --shift-x: -50%; --scale-correction: 0.85; }
-        #schnabel[data-sprite="hurra"] { --shift-x: -50%; --scale-correction: 0.85; }
+        /* Buddeln & Hurra (Sitzend) */
+        #schnabel[data-sprite="buddelnd_1"] { --shift-x: -50%; --scale-correction: 0.80; }
+        #schnabel[data-sprite="buddelnd_2"] { --shift-x: -50%; --scale-correction: 0.80; }
+        #schnabel[data-sprite="hurra"] { --shift-x: -50%; --scale-correction: 0.80; }
 
 
         /* --- UI Elemente --- */
@@ -315,8 +311,6 @@
         let progress = (pxY - yStart) / (yBottom4 - yStart);
         progress = Math.max(0, Math.min(1, progress)); 
         
-        // Reine Perspektiven-Skalierung (0.50 hinten, 1.00 vorne)
-        // Die spezifischen Bildgrößen (Zurücklaufen, Buddeln) werden nun komplett über CSS geregelt!
         const finalScale = 0.50 + (progress * 0.50); 
 
         schnabel.style.left = pxX + 'px'; 
@@ -390,7 +384,6 @@
         
         const fieldEl = document.querySelector(`.field[data-x="${currentGridPos.x}"][data-y="${currentGridPos.y}"]`);
         
-        // Perspektivische Skalierung für das Loch holen!
         const pxCoords = getPixelCoordsFromGrid(currentGridPos.x, currentGridPos.y);
         const currentScale = updateSchnabelVisuals(pxCoords.x, pxCoords.y);
 
@@ -398,7 +391,6 @@
         lochImg.src = 'Loch.png';
         lochImg.className = 'loch-img';
         
-        // Das Loch skalieren: X spiegeln, und mit Perspektiven-Faktor verkleinern!
         lochImg.style.transform = `translateX(-50%) scaleX(-${currentScale}) scaleY(${currentScale})`;
         fieldEl.appendChild(lochImg);
 
