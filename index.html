@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Buddel rum! (v0.15)</title>
+    <title>Buddel rum! (v0.16)</title>
     <style>
         body, html {
             margin: 0;
@@ -82,16 +82,16 @@
             pointer-events: auto;
         }
 
-        /* --- Das Loch mit fester Basisbreite für die Perspektive --- */
+        /* --- Perspektivische Löcher: Viel Kleiner (v0.16) --- */
         .loch-img {
             position: absolute;
             bottom: 25%; 
             left: 50%;
-            width: 140px; 
+            width: 80px; /* Zurück zur Basisgröße, aber deutlich kleiner als 140px */
             transform-origin: bottom center;
             pointer-events: none;
             z-index: 5;
-            /* transform wird vom JavaScript gesetzt! */
+            /* transform wird vom JavaScript gesetzt (inkl. Perspektiven-Scale) */
         }
 
         /* --- DER ANKERPUNKT --- */
@@ -101,7 +101,7 @@
             height: 0;
             z-index: 20;
             pointer-events: none;
-            /* Variablen zur Feinjustierung pro Bild */
+            /* Basis-Korrekturen (Überschreibbar je nach Bild) */
             --shift-x: -50%;
             --shift-y: 0%;
             --scale-correction: 1;
@@ -114,24 +114,24 @@
             transform-origin: bottom center;
         }
 
-        /* --- DAS BILD (Logik aus v0.12 mit scale-correction) --- */
+        /* --- DAS BILD (Logik aus v0.12 mit Korrekturen) --- */
         #schnabel-img {
             position: absolute;
             bottom: 0;
-            height: 180px; /* Die rettende Konstante aus v0.12! */
+            height: 180px; /* Feste Höhe, verhindert das Zuckeln beim Rauchen! */
             width: auto;
             transform: translate(var(--shift-x), var(--shift-y)) scale(var(--scale-correction)); 
             transform-origin: bottom center;
             display: block;
-            transition: transform 0.05s ease-in-out;
+            transition: transform 0.1s ease-in-out; /* Standard-Glättung */
         }
 
-        /* --- PERFEKTE CSS-KORREKTUREN --- */
+        /* * --- CSS-PERFEKTIONS-KORREKTUREN (v0.16) --- * */
         
         /* Stehen */
         #schnabel[data-sprite="stehend"] { --shift-x: -50%; --scale-correction: 1; }
 
-        /* Rauchen (Bild 2 hat Rauchwolke, Schwerpunkt verschiebt sich) */
+        /* Rauchen: Bild 2 ist breiter durch den Rauch rechts. Schwerpunkt nach links korrigieren! */
         #schnabel[data-sprite="rauchend_1"] { --shift-x: -50%; --scale-correction: 1; }
         #schnabel[data-sprite="rauchend_2"] { --shift-x: -40%; --scale-correction: 1.05; }
 
@@ -141,17 +141,26 @@
         #schnabel[data-sprite="laufend_rechts_1"] { --shift-x: -52%; --scale-correction: 1; }
         #schnabel[data-sprite="laufend_rechts_2"] { --shift-x: -48%; --scale-correction: 1; }
 
-        /* Laufen Zurück -> WIRD KLEINER GEMACHT (0.85) */
-        #schnabel[data-sprite="laufend_zurück_links_1"] { --shift-x: -49%; --scale-correction: 0.85; }
-        #schnabel[data-sprite="laufend_zurück_links_2"] { --shift-x: -51%; --scale-correction: 0.85; }
-        #schnabel[data-sprite="laufend_zurück_rechts_1"] { --shift-x: -50%; --scale-correction: 0.85; }
-        #schnabel[data-sprite="laufend_zurück_rechts_2"] { --shift-x: -50%; --scale-correction: 0.85; }
+        /* Laufen Zurück (v0.16) -> WIRD LEICHT KLEINER GEMACHT (0.90) */
+        #schnabel[data-sprite="laufend_zurück_links_1"] { --shift-x: -49%; --scale-correction: 0.90; }
+        #schnabel[data-sprite="laufend_zurück_links_2"] { --shift-x: -51%; --scale-correction: 0.90; }
+        #schnabel[data-sprite="laufend_zurück_rechts_1"] { --shift-x: -50%; --scale-correction: 0.90; }
+        #schnabel[data-sprite="laufend_zurück_rechts_2"] { --shift-x: -50%; --scale-correction: 0.90; }
 
-        /* Buddeln & Hurra (Sitzend) -> WIRD DEUTLICH KLEINER GEMACHT (0.75) */
-        #schnabel[data-sprite="buddelnd_1"] { --shift-x: -50%; --scale-correction: 0.75; }
-        #schnabel[data-sprite="buddelnd_2"] { --shift-x: -50%; --scale-correction: 0.75; }
-        #schnabel[data-sprite="hurra"] { --shift-x: -50%; --scale-correction: 0.75; }
+        /* Buddeln & Hurra (Sitzend) (v0.16) -> WIRD KLEINER GEMACHT (0.80) */
+        #schnabel[data-sprite="buddelnd_1"] { --shift-x: -50%; --scale-correction: 0.80; }
+        #schnabel[data-sprite="buddelnd_2"] { --shift-x: -50%; --scale-correction: 0.80; }
+        #schnabel[data-sprite="hurra"] { --shift-x: -50%; --scale-correction: 0.80; }
 
+        /* * SITZEN-STEHEN WECHSEL (Smooth & Korrekt) * */
+        /* Wir fügen eine spezifische Transition für den Zustandswechsel hinzu!
+           Wenn data-sprite auf stehend wechselt, dauert der transform-Scale-Wechsel 0.2s, 
+           wodurch der Shift weichgezeichnet wird und nicht mehr "knallt". */
+        #schnabel[data-sprite="stehend"] #schnabel-img,
+        #schnabel[data-sprite^="buddelnd"] #schnabel-img,
+        #schnabel[data-sprite="hurra"] #schnabel-img {
+            transition: transform 0.2s ease-in-out;
+        }
 
         /* --- UI Elemente --- */
         #ui-layer {
@@ -314,7 +323,6 @@
         progress = Math.max(0, Math.min(1, progress)); 
         
         // Reine Perspektiven-Skalierung (0.50 hinten, 1.00 vorne)
-        // Die spezifischen Bildgrößen (Zurücklaufen, Buddeln) werden nun komplett über CSS geregelt!
         const finalScale = 0.50 + (progress * 0.50); 
 
         schnabel.style.left = pxX + 'px'; 
@@ -396,7 +404,7 @@
         lochImg.src = 'Loch.png';
         lochImg.className = 'loch-img';
         
-        // Das Loch skalieren: X spiegeln und skalieren, Y normal skalieren
+        // Das Loch skalieren: X spiegeln, und mit Perspektiven-Faktor verkleinern!
         lochImg.style.transform = `translateX(-50%) scaleX(-${currentScale}) scaleY(${currentScale})`;
         fieldEl.appendChild(lochImg);
 
