@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Buddel rum! (v0.18)</title>
+    <title>Buddel rum! (v0.21)</title>
     <style>
         body, html {
             margin: 0;
@@ -125,9 +125,9 @@
         /* Stehen */
         #schnabel[data-sprite="stehend"] { --shift-x: -50%; --scale-correction: 1; }
 
-        /* Rauchen */
+        /* Rauchen - FIX für v0.21: Scale auf 1.0 gehalten, Position weiter nach links justiert */
         #schnabel[data-sprite="rauchend_1"] { --shift-x: -50%; --scale-correction: 1; }
-        #schnabel[data-sprite="rauchend_2"] { --shift-x: -40%; --scale-correction: 1.05; }
+        #schnabel[data-sprite="rauchend_2"] { --shift-x: -58%; --scale-correction: 1; }
 
         /* Laufen Vorwärts & Seitwärts */
         #schnabel[data-sprite="laufend_links_1"] { --shift-x: -50%; --scale-correction: 1; }
@@ -141,7 +141,7 @@
         #schnabel[data-sprite="laufend_zurück_rechts_1"] { --shift-x: -50%; --scale-correction: 0.96; }
         #schnabel[data-sprite="laufend_zurück_rechts_2"] { --shift-x: -50%; --scale-correction: 0.96; }
 
-        /* Buddeln & Hurra (Sitzend): Auf 0.80 korrigiert! */
+        /* Buddeln & Hurra (Sitzend) */
         #schnabel[data-sprite="buddelnd_1"] { --shift-x: -50%; --scale-correction: 0.80; }
         #schnabel[data-sprite="buddelnd_2"] { --shift-x: -50%; --scale-correction: 0.80; }
         #schnabel[data-sprite="hurra"] { --shift-x: -50%; --scale-correction: 0.80; }
