@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Buddel rum! (v0.11)</title>
+    <title>Buddel rum! (v0.12)</title>
     <style>
         body, html {
             margin: 0;
@@ -92,15 +92,17 @@
             z-index: 5;
         }
 
+        /* --- DER ANKERPUNKT --- */
         #schnabel {
             position: absolute;
             width: 0;
             height: 0;
             z-index: 20;
             pointer-events: none;
-            /* Standard-Werte für die Variablen */
+            /* Basis-Korrekturen (Überschreibbar je nach Bild) */
             --shift-x: -50%;
             --shift-y: 0%;
+            --scale-correction: 1;
         }
 
         #schnabel-scale-wrapper {
@@ -110,39 +112,51 @@
             transform-origin: bottom center;
         }
 
-        /* --- DER SPRITE-FIX: Nutzen der Variablen --- */
+        /* --- DER NEUE BILD-FIX: Höhe statt Breite, plus Korrekturen --- */
         #schnabel-img {
             position: absolute;
             bottom: 0;
-            /* Hier greifen die Variablen: x verschiebt seitlich, y verschiebt oben/unten */
-            transform: translate(var(--shift-x), var(--shift-y)); 
-            width: 120px;
-            height: auto;
+            /* FESTE HÖHE: Verhindert das Schrumpfen bei breiten Bildern (z.B. Rauchwolke) */
+            height: 180px; 
+            width: auto;
+            /* Wendet unsere CSS-Variablen für exakte Zentrierung an */
+            transform: translate(var(--shift-x), var(--shift-y)) scale(var(--scale-correction)); 
+            transform-origin: bottom center;
             display: block;
+            transition: transform 0.05s ease-in-out; /* Minimale Glättung gegen harte Sprünge */
         }
 
-        /* * HIER KANNST DU DIE BILDER PERFEKT AN DEN HELM ANGLEICHEN!
-         * shift-x: Links/Rechts verschieben (Standard ist -50%). 
-         * shift-y: Oben/Unten verschieben. Negative Werte (z.B. -2%) schieben das Bild nach OBEN.
+        /* * HIER WIRD JEDES BILD EXAKT JUSTIERT! 
+         * Wenn ein Bild zuckt oder die Größe ändert, passe die Werte hier an!
          */
-           
-        /* Links laufen */
-        #schnabel[data-direction="links"][data-step="1"] { --shift-x: -48%; --shift-y: 0%; }
-        #schnabel[data-direction="links"][data-step="2"] { --shift-x: -52%; --shift-y: -1.5%; }
+
+        /* Stehen */
+        #schnabel[data-sprite="stehend"] { --shift-x: -50%; }
+
+        /* Rauchen - Bild 2 hat die Wolke, dadurch verschiebt sich die Mitte im Originalbild! */
+        #schnabel[data-sprite="rauchend_1"] { --shift-x: -50%; }
+        #schnabel[data-sprite="rauchend_2"] { 
+            --shift-x: -40%; /* Wolke rechts zieht die Mitte ab, wir müssen das Bild weiter nach links schieben */
+            --scale-correction: 1.05; /* Falls die Wolke das Bild auch höher macht, minimal nachskalieren */
+        }
+
+        /* Laufen Links */
+        #schnabel[data-sprite="laufend_links_1"] { --shift-x: -48%; }
+        #schnabel[data-sprite="laufend_links_2"] { --shift-x: -52%; }
         
-        /* Rechts laufen */
-        #schnabel[data-direction="rechts"][data-step="1"] { --shift-x: -52%; --shift-y: 0%; }
-        #schnabel[data-direction="rechts"][data-step="2"] { --shift-x: -48%; --shift-y: -1.5%; }
+        /* Laufen Rechts */
+        #schnabel[data-sprite="laufend_rechts_1"] { --shift-x: -52%; }
+        #schnabel[data-sprite="laufend_rechts_2"] { --shift-x: -48%; }
 
-        /* Zurück Links laufen */
-        #schnabel[data-direction="zurück_links"][data-step="1"] { --shift-x: -49%; --shift-y: 0%; }
-        #schnabel[data-direction="zurück_links"][data-step="2"] { --shift-x: -51%; --shift-y: -1.0%; }
+        /* Zurück Links */
+        #schnabel[data-sprite="laufend_zurück_links_1"] { --shift-x: -49%; }
+        #schnabel[data-sprite="laufend_zurück_links_2"] { --shift-x: -51%; }
         
-        /* Zurück Rechts laufen (Dein Referenzwert, ist schon smooth) */
-        #schnabel[data-direction="zurück_rechts"][data-step="1"] { --shift-x: -50%; --shift-y: 0%; }
-        #schnabel[data-direction="zurück_rechts"][data-step="2"] { --shift-x: -50%; --shift-y: 0%; }
+        /* Zurück Rechts (war laut dir smooth) */
+        #schnabel[data-sprite="laufend_zurück_rechts_1"] { --shift-x: -50%; }
+        #schnabel[data-sprite="laufend_zurück_rechts_2"] { --shift-x: -50%; }
 
-
+        /* UI */
         #ui-layer {
             position: absolute;
             bottom: 20px;
@@ -209,7 +223,7 @@
         <div class="field" data-index="12" data-x="3" data-y="4"></div>
     </div>
 
-    <div id="schnabel" data-direction="" data-step="1">
+    <div id="schnabel" data-sprite="stehend">
         <div id="schnabel-scale-wrapper">
             <img id="schnabel-img" src="Schnabel_stehend.png" alt="Schnabel">
         </div>
@@ -268,6 +282,12 @@
     let smokeInterval = null;
     let digActionInterval = null;
 
+    // Hilfsfunktion: Setzt Bild und Sprite-State gleichzeitig
+    function setSchnabelImage(filename, spriteState) {
+        schnabelImg.src = filename;
+        schnabel.dataset.sprite = spriteState;
+    }
+
     function initGame() {
         document.getElementById('loading-screen').style.display = 'none';
         document.getElementById('game-container').style.display = 'block';
@@ -275,6 +295,7 @@
         setTimeout(() => {
             const startCoords = getPixelCoordsFromGrid(currentGridPos.x, currentGridPos.y);
             updateSchnabelVisuals(startCoords.x, startCoords.y);
+            setSchnabelImage('Schnabel_stehend.png', 'stehend');
             updateButtonState();
         }, 50);
     }
@@ -327,12 +348,11 @@
 
     function startSmoking() {
         let smokeStep = 1;
-        schnabelImg.src = `Schnabel_rauchend_${smokeStep}.png`;
+        setSchnabelImage(`Schnabel_rauchend_${smokeStep}.png`, `rauchend_${smokeStep}`);
 
         smokeInterval = setInterval(() => {
             smokeStep = smokeStep === 1 ? 2 : 1;
-            // Falls du beim Rauchen auch Verschiebungen brauchst, können wir das hier ergänzen
-            schnabelImg.src = `Schnabel_rauchend_${smokeStep}.png`;
+            setSchnabelImage(`Schnabel_rauchend_${smokeStep}.png`, `rauchend_${smokeStep}`);
         }, 1500); 
     }
 
@@ -353,13 +373,13 @@
         stopAllTimers();
 
         let digStep = 1;
-        schnabelImg.src = `Buddel-Bursche_buddelnd-${digStep}.png`;
+        setSchnabelImage(`Buddel-Bursche_buddelnd-${digStep}.png`, `buddelnd_${digStep}`);
         
         let digTime = 0;
         
         digActionInterval = setInterval(() => {
             digStep = digStep === 1 ? 2 : 1;
-            schnabelImg.src = `Buddel-Bursche_buddelnd-${digStep}.png`;
+            setSchnabelImage(`Buddel-Bursche_buddelnd-${digStep}.png`, `buddelnd_${digStep}`);
             digTime += 500;
 
             if (digTime >= 4000) {
@@ -379,12 +399,10 @@
         lochImg.className = 'loch-img';
         fieldEl.appendChild(lochImg);
 
-        schnabelImg.src = 'Buddel-Bursche-Hurra.png';
+        setSchnabelImage('Buddel-Bursche-Hurra.png', 'hurra');
 
         setTimeout(() => {
-            schnabelImg.src = 'Schnabel_stehend.png';
-            schnabel.dataset.direction = ""; 
-            schnabel.dataset.step = "1";
+            setSchnabelImage('Schnabel_stehend.png', 'stehend');
             isDigging = false;
             updateButtonState();
             startIdleTimer(); 
@@ -409,26 +427,20 @@
             else currentDirection = "rechts";               
         }
 
-        schnabel.dataset.direction = currentDirection;
-
         walkStep = 1;
-        schnabel.dataset.step = walkStep; 
-        schnabelImg.src = `Schnabel_laufend_${currentDirection}_${walkStep}.png`;
+        setSchnabelImage(`Schnabel_laufend_${currentDirection}_${walkStep}.png`, `laufend_${currentDirection}_${walkStep}`);
 
         walkInterval = setInterval(() => {
             walkStep = walkStep === 1 ? 2 : 1;
-            schnabel.dataset.step = walkStep; 
-            schnabelImg.src = `Schnabel_laufend_${currentDirection}_${walkStep}.png`;
+            setSchnabelImage(`Schnabel_laufend_${currentDirection}_${walkStep}.png`, `laufend_${currentDirection}_${walkStep}`);
         }, 180); 
     }
 
     function stopWalkAnimation() {
         clearInterval(walkInterval);
-        schnabelImg.src = 'Schnabel_stehend.png';
+        setSchnabelImage('Schnabel_stehend.png', 'stehend');
         walkStep = 1;
         currentDirection = null; 
-        schnabel.dataset.direction = ""; 
-        schnabel.dataset.step = "1";
     }
 
     function moveToTarget(targetX, targetY) {
