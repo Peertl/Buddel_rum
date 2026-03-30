@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Buddel rum! (v0.13)</title>
+    <title>Buddel rum! (v0.14)</title>
     <style>
         body, html {
             margin: 0;
@@ -82,7 +82,6 @@
             pointer-events: auto;
         }
 
-        /* Das Loch hat jetzt eine feste Basis-Pixelbreite, damit es einheitlich skaliert werden kann */
         .loch-img {
             position: absolute;
             bottom: 25%; 
@@ -91,15 +90,17 @@
             transform-origin: bottom center;
             pointer-events: none;
             z-index: 5;
-            /* transform wird jetzt dynamisch im JS gesetzt (inklusive scale und scaleX(-1)) */
         }
 
+        /* --- DER ANKERPUNKT --- */
         #schnabel {
             position: absolute;
             width: 0;
             height: 0;
             z-index: 20;
             pointer-events: none;
+            /* Standard-Werte */
+            --img-width: 120px;
             --shift-x: -50%;
             --shift-y: 0%;
         }
@@ -111,34 +112,50 @@
             transform-origin: bottom center;
         }
 
+        /* --- DAS BILD --- */
         #schnabel-img {
             position: absolute;
             bottom: 0;
-            width: 120px; /* Zurück zur festen Breite! */
+            width: var(--img-width); /* Hier wirkt der Zauber! */
             height: auto; 
             transform: translate(var(--shift-x), var(--shift-y)); 
             transform-origin: bottom center;
             display: block;
         }
 
-        /* --- SPRITE KORREKTUREN --- */
-        #schnabel[data-sprite="stehend"] { --shift-x: -50%; }
+        /* ***************************************************************
+           DIE PERFEKTIONS-WERKSTATT
+           Hier kannst du notfalls noch eingreifen, wenn es minimal hakt:
+           --img-width = Macht Schnabel größer/kleiner
+           --shift-x = Schiebt ihn nach links/rechts (Standard -50%)
+           --shift-y = Schiebt ihn hoch/runter (Helm-Wackeln)
+           *************************************************************** */
 
-        /* Rauchen: Bild 2 ist breiter durch den Rauch rechts. Schwerpunkt nach links korrigieren! */
-        #schnabel[data-sprite="rauchend_1"] { --shift-x: -50%; }
-        #schnabel[data-sprite="rauchend_2"] { --shift-x: -40%; } /* Falls es noch zuckt: Wert zwischen -35% und -45% testen */
+        /* Stehend */
+        #schnabel[data-sprite="stehend"] { --img-width: 120px; --shift-x: -50%; }
 
-        /* Laufen */
-        #schnabel[data-sprite="laufend_links_1"] { --shift-x: -48%; }
-        #schnabel[data-sprite="laufend_links_2"] { --shift-x: -52%; --shift-y: -1.5%; }
-        #schnabel[data-sprite="laufend_rechts_1"] { --shift-x: -52%; }
-        #schnabel[data-sprite="laufend_rechts_2"] { --shift-x: -48%; --shift-y: -1.5%; }
-        #schnabel[data-sprite="laufend_zurück_links_1"] { --shift-x: -49%; }
-        #schnabel[data-sprite="laufend_zurück_links_2"] { --shift-x: -51%; --shift-y: -1.0%; }
-        #schnabel[data-sprite="laufend_zurück_rechts_1"] { --shift-x: -50%; }
-        #schnabel[data-sprite="laufend_zurück_rechts_2"] { --shift-x: -50%; }
+        /* Rauchen: Bild 2 hat Rauchwolke, muss breiter sein, damit Körper gleich bleibt! */
+        #schnabel[data-sprite="rauchend_1"] { --img-width: 120px; --shift-x: -50%; }
+        #schnabel[data-sprite="rauchend_2"] { --img-width: 142px; --shift-x: -43%; } 
 
-        /* UI */
+        /* Laufen Vorwärts */
+        #schnabel[data-sprite="laufend_links_1"] { --img-width: 120px; --shift-x: -48%; }
+        #schnabel[data-sprite="laufend_links_2"] { --img-width: 120px; --shift-x: -52%; --shift-y: -1.5%; }
+        #schnabel[data-sprite="laufend_rechts_1"] { --img-width: 120px; --shift-x: -52%; }
+        #schnabel[data-sprite="laufend_rechts_2"] { --img-width: 120px; --shift-x: -48%; --shift-y: -1.5%; }
+
+        /* Laufen Zurück: Der Kompromiss! Schmalere Bildbreite, damit er nicht riesig wird. */
+        #schnabel[data-sprite="laufend_zurück_links_1"] { --img-width: 105px; --shift-x: -49%; }
+        #schnabel[data-sprite="laufend_zurück_links_2"] { --img-width: 105px; --shift-x: -51%; --shift-y: -1.0%; }
+        #schnabel[data-sprite="laufend_zurück_rechts_1"] { --img-width: 105px; --shift-x: -50%; }
+        #schnabel[data-sprite="laufend_zurück_rechts_2"] { --img-width: 105px; --shift-x: -50%; }
+
+        /* Buddeln & Hurra: Da er sitzt, ist er viel breiter. Wir geben ihm mehr Breite! */
+        #schnabel[data-sprite="buddelnd_1"] { --img-width: 150px; --shift-x: -50%; }
+        #schnabel[data-sprite="buddelnd_2"] { --img-width: 150px; --shift-x: -50%; }
+        #schnabel[data-sprite="hurra"] { --img-width: 160px; --shift-x: -50%; }
+
+        /* --- UI Elemente --- */
         #ui-layer {
             position: absolute;
             bottom: 20px;
@@ -381,7 +398,7 @@
         lochImg.src = 'Loch.png';
         lochImg.className = 'loch-img';
         
-        // Füge dem Loch den Skalierungsfaktor hinzu! (scaleX(-x) für die Spiegelung, scaleY(x) für die Höhe)
+        // Füge dem Loch den Skalierungsfaktor hinzu!
         lochImg.style.transform = `translateX(-50%) scaleX(-${currentScale}) scaleY(${currentScale})`;
         
         fieldEl.appendChild(lochImg);
