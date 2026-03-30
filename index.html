@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Buddel rum! (v0.12)</title>
+    <title>Buddel rum! (v0.13)</title>
     <style>
         body, html {
             margin: 0;
@@ -82,27 +82,26 @@
             pointer-events: auto;
         }
 
+        /* Das Loch hat jetzt eine feste Basis-Pixelbreite, damit es einheitlich skaliert werden kann */
         .loch-img {
             position: absolute;
             bottom: 25%; 
             left: 50%;
-            transform: translateX(-50%) scaleX(-1); 
-            width: 70%; 
+            width: 140px; 
+            transform-origin: bottom center;
             pointer-events: none;
             z-index: 5;
+            /* transform wird jetzt dynamisch im JS gesetzt (inklusive scale und scaleX(-1)) */
         }
 
-        /* --- DER ANKERPUNKT --- */
         #schnabel {
             position: absolute;
             width: 0;
             height: 0;
             z-index: 20;
             pointer-events: none;
-            /* Basis-Korrekturen (Überschreibbar je nach Bild) */
             --shift-x: -50%;
             --shift-y: 0%;
-            --scale-correction: 1;
         }
 
         #schnabel-scale-wrapper {
@@ -112,47 +111,30 @@
             transform-origin: bottom center;
         }
 
-        /* --- DER NEUE BILD-FIX: Höhe statt Breite, plus Korrekturen --- */
         #schnabel-img {
             position: absolute;
             bottom: 0;
-            /* FESTE HÖHE: Verhindert das Schrumpfen bei breiten Bildern (z.B. Rauchwolke) */
-            height: 180px; 
-            width: auto;
-            /* Wendet unsere CSS-Variablen für exakte Zentrierung an */
-            transform: translate(var(--shift-x), var(--shift-y)) scale(var(--scale-correction)); 
+            width: 120px; /* Zurück zur festen Breite! */
+            height: auto; 
+            transform: translate(var(--shift-x), var(--shift-y)); 
             transform-origin: bottom center;
             display: block;
-            transition: transform 0.05s ease-in-out; /* Minimale Glättung gegen harte Sprünge */
         }
 
-        /* * HIER WIRD JEDES BILD EXAKT JUSTIERT! 
-         * Wenn ein Bild zuckt oder die Größe ändert, passe die Werte hier an!
-         */
-
-        /* Stehen */
+        /* --- SPRITE KORREKTUREN --- */
         #schnabel[data-sprite="stehend"] { --shift-x: -50%; }
 
-        /* Rauchen - Bild 2 hat die Wolke, dadurch verschiebt sich die Mitte im Originalbild! */
+        /* Rauchen: Bild 2 ist breiter durch den Rauch rechts. Schwerpunkt nach links korrigieren! */
         #schnabel[data-sprite="rauchend_1"] { --shift-x: -50%; }
-        #schnabel[data-sprite="rauchend_2"] { 
-            --shift-x: -40%; /* Wolke rechts zieht die Mitte ab, wir müssen das Bild weiter nach links schieben */
-            --scale-correction: 1.05; /* Falls die Wolke das Bild auch höher macht, minimal nachskalieren */
-        }
+        #schnabel[data-sprite="rauchend_2"] { --shift-x: -40%; } /* Falls es noch zuckt: Wert zwischen -35% und -45% testen */
 
-        /* Laufen Links */
+        /* Laufen */
         #schnabel[data-sprite="laufend_links_1"] { --shift-x: -48%; }
-        #schnabel[data-sprite="laufend_links_2"] { --shift-x: -52%; }
-        
-        /* Laufen Rechts */
+        #schnabel[data-sprite="laufend_links_2"] { --shift-x: -52%; --shift-y: -1.5%; }
         #schnabel[data-sprite="laufend_rechts_1"] { --shift-x: -52%; }
-        #schnabel[data-sprite="laufend_rechts_2"] { --shift-x: -48%; }
-
-        /* Zurück Links */
+        #schnabel[data-sprite="laufend_rechts_2"] { --shift-x: -48%; --shift-y: -1.5%; }
         #schnabel[data-sprite="laufend_zurück_links_1"] { --shift-x: -49%; }
-        #schnabel[data-sprite="laufend_zurück_links_2"] { --shift-x: -51%; }
-        
-        /* Zurück Rechts (war laut dir smooth) */
+        #schnabel[data-sprite="laufend_zurück_links_2"] { --shift-x: -51%; --shift-y: -1.0%; }
         #schnabel[data-sprite="laufend_zurück_rechts_1"] { --shift-x: -50%; }
         #schnabel[data-sprite="laufend_zurück_rechts_2"] { --shift-x: -50%; }
 
@@ -282,7 +264,6 @@
     let smokeInterval = null;
     let digActionInterval = null;
 
-    // Hilfsfunktion: Setzt Bild und Sprite-State gleichzeitig
     function setSchnabelImage(filename, spriteState) {
         schnabelImg.src = filename;
         schnabel.dataset.sprite = spriteState;
@@ -317,18 +298,14 @@
         let progress = (pxY - yStart) / (yBottom4 - yStart);
         progress = Math.max(0, Math.min(1, progress)); 
         
-        const scaleBase = 0.50 + (progress * 0.50); 
-        let finalScale = scaleBase;
-
-        if (currentDirection && currentDirection.startsWith('zurück_')) {
-            finalScale = scaleBase * 0.85; 
-        }
+        // 0.50 hinten, 1.00 vorne
+        const finalScale = 0.50 + (progress * 0.50); 
 
         schnabel.style.left = pxX + 'px'; 
         schnabel.style.top = pxY + 'px'; 
         schnabelScaleWrapper.style.transform = `scale(${Math.max(0.1, finalScale)})`; 
         
-        return scaleBase; 
+        return finalScale; 
     }
 
     function stopAllTimers() {
@@ -394,9 +371,19 @@
         dugFields.add(fieldKey); 
         
         const fieldEl = document.querySelector(`.field[data-x="${currentGridPos.x}"][data-y="${currentGridPos.y}"]`);
+        
+        // Berechne die aktuelle Skalierung von Schnabel für dieses Feld
+        const pxCoords = getPixelCoordsFromGrid(currentGridPos.x, currentGridPos.y);
+        const currentScale = updateSchnabelVisuals(pxCoords.x, pxCoords.y);
+
+        // Erstelle das Loch
         const lochImg = document.createElement('img');
         lochImg.src = 'Loch.png';
         lochImg.className = 'loch-img';
+        
+        // Füge dem Loch den Skalierungsfaktor hinzu! (scaleX(-x) für die Spiegelung, scaleY(x) für die Höhe)
+        lochImg.style.transform = `translateX(-50%) scaleX(-${currentScale}) scaleY(${currentScale})`;
+        
         fieldEl.appendChild(lochImg);
 
         setSchnabelImage('Buddel-Bursche-Hurra.png', 'hurra');
