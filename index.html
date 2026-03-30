@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Buddel rum! (v0.5)</title>
+    <title>Buddel rum! (v0.6)</title>
     <style>
         body, html {
             margin: 0;
@@ -73,7 +73,7 @@
             width: 84%;
             height: 50%; 
             position: absolute;
-            top: 35%; /* Deutlich weiter nach unten geschoben */
+            top: 35%; 
             left: 8%;
             z-index: 10;
         }
@@ -85,17 +85,23 @@
             pointer-events: auto;
         }
 
+        /* DER NEUE ANKERPUNKT: 0x0 Pixel, bewegt sich über den Sand */
         #schnabel {
             position: absolute;
-            width: 120px;
-            transform-origin: bottom center;
+            width: 0;
+            height: 0;
             z-index: 20;
             pointer-events: none;
         }
 
+        /* DAS BILD: Richtet sich stur mit der unteren Mitte am Ankerpunkt aus */
         #schnabel img {
-            width: 100%;
+            position: absolute;
+            bottom: 0;
+            left: -60px; /* Exakt die Hälfte der 120px Breite nach links schieben */
+            width: 120px;
             height: auto;
+            transform-origin: bottom center;
             display: block;
         }
     </style>
@@ -131,7 +137,6 @@
 </div>
 
 <script>
-    // --- 1. Preloader Logik ---
     const imagesToLoad = [
         'Hintergrund.png', 'Schnabel_stehend.png',
         'Schnabel_laufend_links_1.png', 'Schnabel_laufend_links_2.png',
@@ -156,17 +161,16 @@
         img.src = src;
     });
 
-    // --- 2. Spiel Logik ---
     const fields = document.querySelectorAll('.field');
-    const schnabel = document.getElementById('schnabel');
-    const schnabelImg = document.getElementById('schnabel-img');
+    const schnabel = document.getElementById('schnabel'); // Der Anker-Div
+    const schnabelImg = document.getElementById('schnabel-img'); // Das Bild im Div
     const gridEl = document.getElementById('grid');
     
     let isMoving = false;
     let walkStep = 1;
     let walkInterval = null;
     
-    // Grid-Koordinaten: X(1-3), Y(1-4). Y=0.5 ist direkt am oberen Rand von Feld 1
+    // Start über Feld 1
     let currentGridPos = { x: 1, y: 0.5 }; 
 
     function initGame() {
@@ -193,22 +197,26 @@
     }
 
     function updateSchnabelVisuals(pxX, pxY) {
-        const topY = getPixelCoordsFromGrid(1, 0).y;
-        const bottomY = getPixelCoordsFromGrid(1, 4.5).y;
+        // Exakte Y-Referenzpunkte auf dem Grid
+        const yTop = getPixelCoordsFromGrid(1, 1).y;
+        const yBottom = getPixelCoordsFromGrid(1, 4).y;
         
-        let progress = (pxY - topY) / (bottomY - topY);
-        progress = Math.max(0, Math.min(1, progress)); 
+        // Berechnung: Wieviel Prozent ist er vom obersten zum untersten Feld fortgeschritten?
+        let progress = (pxY - yTop) / (yBottom - yTop);
         
+        // Skalierung: Feld 1 (oben) = 0.40, Feld 4 (unten) = 1.00
         const scale = 0.40 + (progress * 0.60); 
 
-        schnabel.style.left = (pxX - 60) + 'px'; 
-        schnabel.style.top = (pxY - schnabel.offsetHeight) + 'px'; 
-        schnabel.style.transform = `scale(${scale})`;
+        // Setze den Ankerpunkt exakt auf die Pixel-Koordinate
+        schnabel.style.left = pxX + 'px'; 
+        schnabel.style.top = pxY + 'px'; 
         
-        return scale; // Wir geben die Scale zurück, um sie für die Laufgeschwindigkeit zu nutzen
+        // Skaliere das Bild relativ zu diesem Anker
+        schnabelImg.style.transform = `scale(${Math.max(0.2, scale)})`; // Math.max schützt vor negativer Skalierung
+        
+        return scale; 
     }
 
-    // --- Lauf-Animation ---
     function startWalkAnimation(fromX, fromY, toX, toY) {
         clearInterval(walkInterval);
         
@@ -216,29 +224,27 @@
         let dx = toX - fromX;
         let dy = toY - fromY;
 
-        // Logik anhand deiner Vorgaben
         if (Math.abs(dx) < 1) { 
-            // Streng vertikal
-            if (dy < 0) direction = "zurück_rechts"; // Nach oben
-            else direction = "rechts";               // Nach unten
+            // Vertikal
+            if (dy < 0) direction = "zurück_rechts"; 
+            else direction = "rechts";               
         } else if (dx < 0) {
-            // Nach links (inkl. schräg links)
-            if (dy < 0) direction = "zurück_links";  // Schräg oben links
-            else direction = "links";                // Schräg unten links oder exakt links
+            // Links
+            if (dy < 0) direction = "zurück_links";  
+            else direction = "links";                
         } else {
-            // Nach rechts (inkl. schräg rechts)
-            if (dy < 0) direction = "zurück_rechts"; // Schräg oben rechts
-            else direction = "rechts";               // Schräg unten rechts oder exakt rechts
+            // Rechts
+            if (dy < 0) direction = "zurück_rechts"; 
+            else direction = "rechts";               
         }
 
-        // Sofort loslegen!
         walkStep = 1;
         schnabelImg.src = `Schnabel_laufend_${direction}_${walkStep}.png`;
 
         walkInterval = setInterval(() => {
             walkStep = walkStep === 1 ? 2 : 1;
             schnabelImg.src = `Schnabel_laufend_${direction}_${walkStep}.png`;
-        }, 180); // Deutlich verlangsamt für ruhigeren Sprite-Wechsel
+        }, 180); 
     }
 
     function stopWalkAnimation() {
@@ -247,7 +253,6 @@
         walkStep = 1;
     }
 
-    // --- Bewegungsschleife (Direkter Weg) ---
     function moveToTarget(targetX, targetY) {
         const startCoords = getPixelCoordsFromGrid(currentGridPos.x, currentGridPos.y);
         const targetCoords = getPixelCoordsFromGrid(targetX, targetY);
@@ -257,18 +262,12 @@
         const startX = startCoords.x;
         const startY = startCoords.y;
         
-        // Pixel-Distanz berechnen
         const distance = Math.sqrt(Math.pow(targetCoords.x - startX, 2) + Math.pow(targetCoords.y - startY, 2));
         
-        // Perspektivische Geschwindigkeit: 
-        // Wir nehmen die durchschnittliche Skalierung auf dem Weg. 
-        // Ist die Skalierung klein (hinten), wird die Dauer länger!
         const startScale = updateSchnabelVisuals(startX, startY);
         const endScale = updateSchnabelVisuals(targetCoords.x, targetCoords.y);
         const avgScale = (startScale + endScale) / 2;
         
-        // Basis-Geschwindigkeit geteilt durch Scale. 
-        // distance * 6 ist der Basiswert. Im Hintergrund (Scale 0.4) dauert es 2.5x so lang wie vorne!
         const duration = (distance * 6) / avgScale; 
         
         let startTime = null;
@@ -290,14 +289,12 @@
                 currentGridPos.y = targetY;
                 isMoving = false;
                 stopWalkAnimation();
-                console.log("Am Ziel angekommen!");
-                // HIER KOMMT DIE BUDDEL-ANIMATION HIN
+                console.log("Exakt und ohne Ruckler am Ziel angekommen!");
             }
         }
         requestAnimationFrame(animate);
     }
 
-    // Klick-Ereignisse
     fields.forEach(field => {
         field.addEventListener('click', (e) => {
             if (isMoving) return;
@@ -308,7 +305,7 @@
             if(tX === currentGridPos.x && tY === currentGridPos.y) return;
 
             isMoving = true;
-            moveToTarget(tX, tY); // Kein Array/Pfad mehr nötig, direkter Flug!
+            moveToTarget(tX, tY); 
         });
     });
 </script>
