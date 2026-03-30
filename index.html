@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Buddel rum!</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: 'Comic Sans MS', sans-serif; /* Passt zum Cartoon-Stil */
+            background-color: #e5b85c;
+        }
+        
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            max-width: 600px; /* Perfekt für mobile Ansicht auf dem Desktop */
+            margin: 0 auto;
+            background-image: url('Hintergrund.png');
+            background-size: cover;
+            background-position: center bottom;
+            overflow: hidden;
+        }
+
+        /* Das 3x4 Raster */
+        #grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(4, 1fr);
+            width: 100%;
+            height: 75%; 
+            position: absolute;
+            bottom: 0;
+        }
+
+        .field {
+            /* border: 1px dashed rgba(0,0,0,0.1); Zum Testen des Rasters einkommentieren */
+            position: relative;
+            cursor: pointer;
+            z-index: 10;
+        }
+
+        /* Unser Buddel-Bursche */
+        #schnabel {
+            position: absolute;
+            width: 120px; 
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            transition: all 0.8s ease-in-out; /* Weiche Lauf-Animation */
+            z-index: 20;
+            pointer-events: none; /* Klicks gehen durch ihn durch auf das Raster */
+        }
+
+        #schnabel img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <div id="grid">
+        <div class="field" data-index="1"></div>
+        <div class="field" data-index="2"></div>
+        <div class="field" data-index="3"></div>
+        <div class="field" data-index="4"></div>
+        <div class="field" data-index="5"></div>
+        <div class="field" data-index="6"></div>
+        <div class="field" data-index="7"></div>
+        <div class="field" data-index="8"></div>
+        <div class="field" data-index="9"></div>
+        <div class="field" data-index="10"></div>
+        <div class="field" data-index="11"></div>
+        <div class="field" data-index="12"></div>
+    </div>
+
+    <div id="schnabel">
+        <img id="schnabel-img" src="Schnabel_stehend.png" alt="Schnabel">
+    </div>
+</div>
+
+<script>
+    const fields = document.querySelectorAll('.field');
+    const schnabel = document.getElementById('schnabel');
+
+    fields.forEach(field => {
+        field.addEventListener('click', (e) => {
+            // Berechnet die Mitte des angeklickten Feldes
+            const rect = e.target.getBoundingClientRect();
+            const containerRect = document.getElementById('game-container').getBoundingClientRect();
+            
+            const targetX = rect.left - containerRect.left + (rect.width / 2) - (schnabel.offsetWidth / 2);
+            // Wir setzen ihn etwas tiefer ins Feld, damit es räumlicher wirkt
+            const targetY = rect.top - containerRect.top + (rect.height / 1.5) - (schnabel.offsetHeight / 2);
+
+            // Schnabel bewegt sich
+            schnabel.style.left = targetX + 'px';
+            schnabel.style.top = targetY + 'px';
+            schnabel.style.transform = 'none'; // Setzt die anfängliche Zentrierung zurück
+            
+            console.log("Schnabel läuft zu Feld: " + e.target.dataset.index);
+            // Hier kommt später der Aufruf für den 4-Sekunden Buddel-Timer hin!
+        });
+    });
+</script>
+
+</body>
+</html>
