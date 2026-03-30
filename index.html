@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Buddel rum! (v0.9)</title>
+    <title>Buddel rum! (v0.10)</title>
     <style>
         body, html {
             margin: 0;
@@ -79,25 +79,24 @@
         }
 
         .field {
-            /* border: 1px solid rgba(0,0,0,0.1); /* Zum Testen einkommentieren */
+            /* border: 1px solid rgba(0,0,0,0.1); */
             position: relative;
             cursor: pointer;
             pointer-events: auto;
         }
 
-        /* --- Das Loch: Gespiegelt & Korrekt positioniert --- */
+        /* --- Das Loch: Gespiegelt & Korrigierte Position --- */
         .loch-img {
             position: absolute;
-            bottom: 45%; /* Viel höher platziert, näher an Schnabels Standpunkt */
+            bottom: 25%; /* Wieder etwas weiter nach unten geschoben */
             left: 50%;
-            /* transform: Mittig zentrieren & Horizontal spiegeln, damit Haufen links ist */
-            transform: translateX(-50%) scaleX(-1); 
-            width: 70%; /* Etwas kleiner */
+            transform: translateX(-50%) scaleX(-1); /* Zentriert und Haufen nach links gespiegelt */
+            width: 70%; 
             pointer-events: none;
             z-index: 5;
         }
 
-        /* --- DER ANKERPUNKT: 0x0 Pixel, bewegt sich über den Sand --- */
+        /* --- 1. DER ANKERPUNKT --- */
         #schnabel {
             position: absolute;
             width: 0;
@@ -106,23 +105,44 @@
             pointer-events: none;
         }
 
-        /* --- DAS BILD: Grund-Layout für pixelgenaue Ausrichtung --- */
-        #schnabel img {
+        /* --- 2. DER SKALIERUNGS-WRAPPER --- */
+        #schnabel-scale-wrapper {
             position: absolute;
-            bottom: 0; /* Stur am Boden ankleben */
-            left: -60px; /* Base centering for 120px wide image */
+            bottom: 0; 
+            left: 0;
+            transform-origin: bottom center;
+            /* Nur die Skalierung passiert hier durch JS, keine Verschiebungen! */
+        }
+
+        /* --- 3. DAS BILD (Perfekt zentriert) --- */
+        #schnabel-img {
+            position: absolute;
+            bottom: 0;
+            /* Zentriert das Bild exakt auf dem 0-Punkt des Wrappers */
+            transform: translateX(-50%); 
             width: 120px;
             height: auto;
-            transform-origin: bottom center;
             display: block;
         }
 
-        /* --- Walking Smoothness: Mikro-Anpassungen per Richtung --- 
-           Wir nutzen data-direction Attribut, um das Zappeln zu korrigieren. */
-        #schnabel[data-direction="links"] img { left: -58px; }         /* Leichte Verschiebung rechts */
-        #schnabel[data-direction="rechts"] img { left: -62px; }        /* Leichte Verschiebung links */
-        #schnabel[data-direction="zurück_links"] img { left: -62px; }  /* Leichte Verschiebung links */
-        /* #schnabel[data-direction="zurück_rechts"] img { left: -60px; } - IST SCHON SMOOTH */
+        /* --- Walking Smoothness: Frame-genaue Mikro-Korrekturen --- 
+           Wenn Schnabel in einem bestimmten Frame "zuckt", gleichen wir hier den Schwerpunkt aus. */
+           
+        /* Links laufen ausgleichen */
+        #schnabel[data-direction="links"][data-step="1"] #schnabel-img { transform: translateX(-48%); }
+        #schnabel[data-direction="links"][data-step="2"] #schnabel-img { transform: translateX(-52%); }
+        
+        /* Rechts laufen ausgleichen */
+        #schnabel[data-direction="rechts"][data-step="1"] #schnabel-img { transform: translateX(-52%); }
+        #schnabel[data-direction="rechts"][data-step="2"] #schnabel-img { transform: translateX(-48%); }
+
+        /* Zurück Links laufen ausgleichen */
+        #schnabel[data-direction="zurück_links"][data-step="1"] #schnabel-img { transform: translateX(-49%); }
+        #schnabel[data-direction="zurück_links"][data-step="2"] #schnabel-img { transform: translateX(-51%); }
+        
+        /* Zurück Rechts war laut dir schon smooth, bleibt exakt bei -50% */
+        #schnabel[data-direction="zurück_rechts"][data-step="1"] #schnabel-img { transform: translateX(-50%); }
+        #schnabel[data-direction="zurück_rechts"][data-step="2"] #schnabel-img { transform: translateX(-50%); }
 
         /* --- UI Elemente --- */
         #ui-layer {
@@ -191,8 +211,10 @@
         <div class="field" data-index="12" data-x="3" data-y="4"></div>
     </div>
 
-    <div id="schnabel">
-        <img id="schnabel-img" src="Schnabel_stehend.png" alt="Schnabel">
+    <div id="schnabel" data-direction="" data-step="1">
+        <div id="schnabel-scale-wrapper">
+            <img id="schnabel-img" src="Schnabel_stehend.png" alt="Schnabel">
+        </div>
     </div>
 
     <div id="ui-layer">
@@ -201,7 +223,6 @@
 </div>
 
 <script>
-    // --- Preloader inkl. aller Bilder ---
     const imagesToLoad = [
         'Hintergrund.png', 'Schnabel_stehend.png',
         'Schnabel_laufend_links_1.png', 'Schnabel_laufend_links_2.png',
@@ -229,9 +250,9 @@
         img.src = src;
     });
 
-    // --- Spiel Variablen ---
     const fields = document.querySelectorAll('.field');
-    const schnabel = document.getElementById('schnabel'); // Der Anker Div
+    const schnabel = document.getElementById('schnabel'); 
+    const schnabelScaleWrapper = document.getElementById('schnabel-scale-wrapper'); 
     const schnabelImg = document.getElementById('schnabel-img');
     const gridEl = document.getElementById('grid');
     const btnBuddeln = document.getElementById('btn-buddeln');
@@ -242,16 +263,13 @@
     let walkInterval = null;
     let currentDirection = null; 
     
-    // Status-Tracking
-    let currentGridPos = { x: 1, y: 0.5 }; // Start
-    let dugFields = new Set(); // Format: "x-y"
+    let currentGridPos = { x: 1, y: 0.5 }; 
+    let dugFields = new Set(); 
 
-    // Timer Variablen
     let idleTimer = null;
     let smokeInterval = null;
     let digActionInterval = null;
 
-    // --- Initialisierung ---
     function initGame() {
         document.getElementById('loading-screen').style.display = 'none';
         document.getElementById('game-container').style.display = 'block';
@@ -266,46 +284,37 @@
     function getPixelCoordsFromGrid(gX, gY) {
         const rect = gridEl.getBoundingClientRect();
         const container = document.getElementById('game-container').getBoundingClientRect();
-        
         const cellWidth = rect.width / 3;
         const cellHeight = rect.height / 4;
-
         const pxX = (rect.left - container.left) + (gX - 0.5) * cellWidth;
         const pxY = (rect.top - container.top) + (gY - 0.5) * cellHeight;
-        
         return { x: pxX, y: pxY };
     }
 
-    // Die Visuals sind strikt an den Ankerpunkt gebunden
     function updateSchnabelVisuals(pxX, pxY) {
-        // Exakte Y-Referenzpunkte auf dem Grid: Start (y0.5) und Feld 4 (y4.0)
         const yStart = getPixelCoordsFromGrid(1, 0.5).y;
         const yBottom4 = getPixelCoordsFromGrid(1, 4.0).y;
         
-        // Wieviel Prozent fortgeschritten?
         let progress = (pxY - yStart) / (yBottom4 - yStart);
         progress = Math.max(0, Math.min(1, progress)); 
         
-        // Skalierung: 0.50 (Start) bis 1.00 (Unten)
         const scaleBase = 0.50 + (progress * 0.50); 
         let finalScale = scaleBase;
 
-        // --- Korrekturfaktor für Rückwärts-Bilder (Assets sind visuell zu groß) ---
         if (currentDirection && currentDirection.startsWith('zurück_')) {
-            finalScale = scaleBase * 0.85; // Um 15 % verkleinern
+            finalScale = scaleBase * 0.85; 
         }
 
-        // Setze den Ankerpunkt exakt auf die Pixel-Koordinate
+        // Anker platzieren
         schnabel.style.left = pxX + 'px'; 
         schnabel.style.top = pxY + 'px'; 
         
-        // Skaliere das Bild relativ zu diesem Anker
-        schnabelImg.style.transform = `scale(${Math.max(0.1, finalScale)})`; 
+        // NUR den Wrapper skalieren, damit translateX(-50%) auf dem Bild erhalten bleibt
+        schnabelScaleWrapper.style.transform = `scale(${Math.max(0.1, finalScale)})`; 
         
-        return scaleBase; // Basis-Skalierung für Geschwindigkeit zurückgeben
+        return scaleBase; 
     }
 
-    // --- Timer Logik ---
     function stopAllTimers() {
         clearTimeout(idleTimer);
         clearInterval(smokeInterval);
@@ -314,11 +323,11 @@
 
     function startIdleTimer() {
         stopAllTimers();
-        if (currentGridPos.y === 0.5) return; // Nicht rauchen am Start
+        if (currentGridPos.y === 0.5) return; 
 
         idleTimer = setTimeout(() => {
             startSmoking();
-        }, 3000); // 3 Sekunden warten
+        }, 3000); 
     }
 
     function startSmoking() {
@@ -327,11 +336,11 @@
 
         smokeInterval = setInterval(() => {
             smokeStep = smokeStep === 1 ? 2 : 1;
+            schnabel.dataset.step = smokeStep; // Updatet CSS, falls nötig
             schnabelImg.src = `Schnabel_rauchend_${smokeStep}.png`;
-        }, 1500); // Schneller! (Alle 1,5 Sekunden wechseln)
+        }, 1500); // 1,5 Sekunden
     }
 
-    // --- UI Update ---
     function updateButtonState() {
         const fieldKey = `${currentGridPos.x}-${currentGridPos.y}`;
         if (!isMoving && !isDigging && currentGridPos.y !== 0.5 && !dugFields.has(fieldKey)) {
@@ -341,7 +350,6 @@
         }
     }
 
-    // --- Buddel-Action ---
     btnBuddeln.addEventListener('click', () => {
         if (btnBuddeln.disabled) return;
         
@@ -350,13 +358,14 @@
         stopAllTimers();
 
         let digStep = 1;
+        schnabel.dataset.step = digStep;
         schnabelImg.src = `Buddel-Bursche_buddelnd-${digStep}.png`;
         
         let digTime = 0;
         
-        // Buddel-Interval: Alle 0.5s wechseln für 4s
         digActionInterval = setInterval(() => {
             digStep = digStep === 1 ? 2 : 1;
+            schnabel.dataset.step = digStep;
             schnabelImg.src = `Buddel-Bursche_buddelnd-${digStep}.png`;
             digTime += 500;
 
@@ -368,7 +377,6 @@
     });
 
     function finishDigging() {
-        // 1. Loch platzieren
         const fieldKey = `${currentGridPos.x}-${currentGridPos.y}`;
         dugFields.add(fieldKey); 
         
@@ -378,20 +386,18 @@
         lochImg.className = 'loch-img';
         fieldEl.appendChild(lochImg);
 
-        // 2. Hurra Pose
         schnabelImg.src = 'Buddel-Bursche-Hurra.png';
 
-        // 3. Nach 3 Sekunden aufstehen 
         setTimeout(() => {
             schnabelImg.src = 'Schnabel_stehend.png';
+            schnabel.dataset.direction = ""; // Reset
+            schnabel.dataset.step = "1";
             isDigging = false;
             updateButtonState();
             startIdleTimer(); 
-            // HIER KOMMT SPÄTER FUND-SCREEN LOGIK
         }, 3000);
     }
 
-    // --- Lauf-Animation ---
     function startWalkAnimation(fromX, fromY, toX, toY) {
         clearInterval(walkInterval);
         
@@ -410,14 +416,15 @@
             else currentDirection = "rechts";               
         }
 
-        // --- Walking Smoothness: Richtung an CSS übergeben für Mikro-Shifts ---
         schnabel.dataset.direction = currentDirection;
 
         walkStep = 1;
+        schnabel.dataset.step = walkStep; // Triggert CSS-Korrektur
         schnabelImg.src = `Schnabel_laufend_${currentDirection}_${walkStep}.png`;
 
         walkInterval = setInterval(() => {
             walkStep = walkStep === 1 ? 2 : 1;
+            schnabel.dataset.step = walkStep; // Triggert die Gegenseite im CSS
             schnabelImg.src = `Schnabel_laufend_${currentDirection}_${walkStep}.png`;
         }, 180); 
     }
@@ -427,7 +434,8 @@
         schnabelImg.src = 'Schnabel_stehend.png';
         walkStep = 1;
         currentDirection = null; 
-        schnabel.dataset.direction = ""; // Richtung im CSS zurücksetzen
+        schnabel.dataset.direction = ""; 
+        schnabel.dataset.step = "1";
     }
 
     function moveToTarget(targetX, targetY) {
@@ -463,13 +471,11 @@
             if (progress < 1) {
                 requestAnimationFrame(animate);
             } else {
-                // ANGEKOMMEN
                 currentGridPos.x = targetX;
                 currentGridPos.y = targetY;
                 isMoving = false;
                 stopWalkAnimation();
                 
-                // Finales Update ohne Korrekturfaktor, damit er die korrekte Standgröße hat
                 const finalCoords = getPixelCoordsFromGrid(targetX, targetY);
                 updateSchnabelVisuals(finalCoords.x, finalCoords.y);
                 
@@ -480,7 +486,6 @@
         requestAnimationFrame(animate);
     }
 
-    // --- Klick Events Grid ---
     fields.forEach(field => {
         field.addEventListener('click', (e) => {
             if (isMoving || isDigging) return;
