@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Buddel rum! (v0.3)</title>
+    <title>Buddel rum! (v0.4)</title>
     <style>
         body, html {
             margin: 0;
@@ -12,36 +12,75 @@
             height: 100%;
             overflow: hidden;
             font-family: 'Comic Sans MS', sans-serif;
-            background-color: #e5b85c;
+            background-color: #e5b85c; /* Sandfarbe als Backup */
         }
         
+        /* --- Ladebildschirm --- */
+        #loading-screen {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: #e5b85c;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            color: #5a3d17;
+        }
+
+        #loading-screen h1 {
+            font-size: 2rem;
+            margin-bottom: 20px;
+            text-shadow: 1px 1px 0px #fff;
+        }
+
+        .progress-bar-container {
+            width: 70%;
+            max-width: 300px;
+            height: 25px;
+            border: 3px solid #5a3d17;
+            background-color: #d4a351;
+            border-radius: 12px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        #progress-bar {
+            width: 0%;
+            height: 100%;
+            background-color: #8b5a2b;
+            transition: width 0.3s ease;
+        }
+
+        /* --- Spielbereich --- */
         #game-container {
             position: relative;
             width: 100vw;
-            height: 100vh;
+            height: 100dvh; /* Nutzt die dynamische Höhe, ignoriert Browser-Leisten */
             max-width: 600px;
             margin: 0 auto;
             background-image: url('Hintergrund.png');
             background-size: cover;
-            background-position: center bottom;
+            /* Hintergrund etwas nach oben geschoben, damit unten nichts abgeschnitten wird */
+            background-position: center 80%; 
             overflow: hidden;
+            display: none; /* Wird erst nach dem Laden gezeigt */
         }
 
-        /* Felder weiter oben platziert */
         #grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             grid-template-rows: repeat(4, 1fr);
-            width: 80%;
-            height: 55%; 
+            width: 84%;
+            height: 60%; 
             position: absolute;
-            top: 25%; /* Weiter nach oben verschoben */
-            left: 10%;
+            top: 20%; /* Raster weiter oben platziert */
+            left: 8%;
             z-index: 10;
         }
 
         .field {
-            /* border: 1px dashed rgba(0,0,0,0.3); /* Zum Testen einkommentieren */
+            /* border: 1px solid rgba(0,0,0,0.1); /* Zum Testen einkommentieren */
             position: relative;
             cursor: pointer;
             pointer-events: auto;
@@ -50,7 +89,6 @@
         #schnabel {
             position: absolute;
             width: 120px;
-            /* Transform origin unten Mitte, damit er beim Skalieren nicht "schwebt" */
             transform-origin: bottom center;
             z-index: 20;
             pointer-events: none;
@@ -64,6 +102,13 @@
     </style>
 </head>
 <body>
+
+<div id="loading-screen">
+    <h1>Expedition startet...</h1>
+    <div class="progress-bar-container">
+        <div id="progress-bar"></div>
+    </div>
+</div>
 
 <div id="game-container">
     <div id="grid">
@@ -87,49 +132,87 @@
 </div>
 
 <script>
+    // --- 1. Preloader Logik ---
+    const imagesToLoad = [
+        'Hintergrund.png', 'Schnabel_stehend.png',
+        'Schnabel_laufend_links_1.png', 'Schnabel_laufend_links_2.png',
+        'Schnabel_laufend_rechts_1.png', 'Schnabel_laufend_rechts_2.png',
+        'Schnabel_laufend_zurück_links_1.png', 'Schnabel_laufend_zurück_links_2.png',
+        'Schnabel_laufend_zurück_rechts_1.png', 'Schnabel_laufend_zurück_rechts_2.png'
+    ];
+    let loadedImages = 0;
+
+    function imageLoaded() {
+        loadedImages++;
+        document.getElementById('progress-bar').style.width = (loadedImages / imagesToLoad.length * 100) + '%';
+        if (loadedImages === imagesToLoad.length) {
+            setTimeout(initGame, 500); // Kurze Pause für den Effekt
+        }
+    }
+
+    imagesToLoad.forEach(src => {
+        const img = new Image();
+        img.onload = imageLoaded;
+        img.onerror = imageLoaded; // Verhindert ewiges Laden bei einem Tippfehler
+        img.src = src;
+    });
+
+
+    // --- 2. Spiel Logik ---
     const fields = document.querySelectorAll('.field');
     const schnabel = document.getElementById('schnabel');
     const schnabelImg = document.getElementById('schnabel-img');
+    const gridEl = document.getElementById('grid');
     
-    // Status-Variablen
     let isMoving = false;
     let walkStep = 1;
     let walkInterval = null;
     let currentPath = [];
     
-    // Schnabels exakte Position auf dem Bildschirm
-    let currentPos = { x: 0, y: 0, gridX: 1, gridY: 0 }; // gridY 0 = Start oberhalb Feld 1
+    // Grid-Koordinaten: X(1-3), Y(1-4). Y=0.2 ist knapp oberhalb von Feld 1.
+    let currentGridPos = { x: 1, y: 0.2 }; 
 
-    // Wartet, bis das Layout geladen ist, um die Startposition zu berechnen
-    window.addEventListener('load', () => {
-        const field1 = document.querySelector('.field[data-index="1"]');
-        const coords = getFieldCenter(field1);
+    function initGame() {
+        document.getElementById('loading-screen').style.display = 'none';
+        document.getElementById('game-container').style.display = 'block';
         
-        // Startposition: Selbe X-Achse wie Feld 1, aber weiter oben (Y - 60px)
-        currentPos.x = coords.x;
-        currentPos.y = coords.y - 60; 
-        
-        updateSchnabelVisuals(currentPos.x, currentPos.y, currentPos.gridY);
-    });
-
-    // Berechnet die absolute Pixel-Mitte eines Feldes
-    function getFieldCenter(fieldEl) {
-        const rect = fieldEl.getBoundingClientRect();
-        const container = document.getElementById('game-container').getBoundingClientRect();
-        return {
-            x: rect.left - container.left + (rect.width / 2),
-            y: rect.top - container.top + (rect.height / 1.5)
-        };
+        // Nach dem Einblenden kurz warten, bis das Layout gerendert ist, dann positionieren
+        setTimeout(() => {
+            const startCoords = getPixelCoordsFromGrid(currentGridPos.x, currentGridPos.y);
+            updateSchnabelVisuals(startCoords.x, startCoords.y);
+        }, 50);
     }
 
-    // Aktualisiert Position und Skalierung (klein = oben, groß = unten)
-    function updateSchnabelVisuals(pxX, pxY, gridY) {
-        // Skalierung von 0.45 (Start) bis 1.0 (Feld 4)
-        const scale = 0.45 + (gridY / 4) * 0.55; 
+    // Wandelt logische Grid-Werte (auch Kommazahlen für halbe Schritte) in echte Pixel um
+    function getPixelCoordsFromGrid(gX, gY) {
+        const rect = gridEl.getBoundingClientRect();
+        const container = document.getElementById('game-container').getBoundingClientRect();
         
-        // Versatz um die halbe Breite, damit er mittig steht
-        schnabel.style.left = (pxX - 60) + 'px'; // 60 ist halbe Breite (120/2)
-        schnabel.style.top = (pxY - schnabel.offsetHeight) + 'px';
+        const cellWidth = rect.width / 3;
+        const cellHeight = rect.height / 4;
+
+        // gX=1 ist die Mitte von Spalte 1.
+        const pxX = (rect.left - container.left) + (gX - 0.5) * cellWidth;
+        const pxY = (rect.top - container.top) + (gY - 0.5) * cellHeight;
+        
+        return { x: pxX, y: pxY };
+    }
+
+    // Die Größe wird STRIKT an die Pixel-Y-Koordinate gekoppelt
+    function updateSchnabelVisuals(pxX, pxY) {
+        // Berechne die extremsten Punkte für die Skalierung
+        const topY = getPixelCoordsFromGrid(1, 0).y;
+        const bottomY = getPixelCoordsFromGrid(1, 4.5).y;
+        
+        // Wert zwischen 0 (ganz oben) und 1 (ganz unten)
+        let progress = (pxY - topY) / (bottomY - topY);
+        progress = Math.max(0, Math.min(1, progress)); 
+        
+        // Größe schwankt weich zwischen 40% und 100%
+        const scale = 0.40 + (progress * 0.60); 
+
+        schnabel.style.left = (pxX - 60) + 'px'; // Zentrieren (120px / 2)
+        schnabel.style.top = (pxY - schnabel.offsetHeight) + 'px'; // Am Boden ausrichten
         schnabel.style.transform = `scale(${scale})`;
     }
 
@@ -137,16 +220,21 @@
     function startWalkAnimation(fromX, fromY, toX, toY) {
         clearInterval(walkInterval);
         
-        // Richtung bestimmen anhand der Pixel-Bewegung
         let direction = "";
+        // Geht er auf dem Bildschirm nach oben?
         if (toY < fromY) direction += "zurück_";
+        // Geht er nach links oder rechts?
         if (toX < fromX) direction += "links";
         else direction += "rechts";
+
+        // Sofort das erste Bild setzen, damit die Beine sofort anfangen!
+        walkStep = 1;
+        schnabelImg.src = `Schnabel_laufend_${direction}_${walkStep}.png`;
 
         walkInterval = setInterval(() => {
             walkStep = walkStep === 1 ? 2 : 1;
             schnabelImg.src = `Schnabel_laufend_${direction}_${walkStep}.png`;
-        }, 80); // Schneller! (80ms)
+        }, 80); 
     }
 
     function stopWalkAnimation() {
@@ -155,25 +243,29 @@
         walkStep = 1;
     }
 
-    // --- Wegfindung (Der Haken) ---
-    function calculatePath(targetGridX, targetGridY) {
+    // --- Wegfindung (Der diagonale Haken) ---
+    function calculatePath(targetX, targetY) {
         let path = [];
-        
-        // Wenn es geradeaus horizontal oder vertikal geht, baue einen Haken ein
-        if (currentPos.gridX === targetGridX && currentPos.gridY !== targetGridY) {
-            // Vertikaler Lauf -> Ausweichschritt zur Seite
-            let pivotX = targetGridX === 3 ? 2 : targetGridX + 1;
-            let pivotY = Math.max(1, Math.floor((currentPos.gridY + targetGridY) / 2));
+        let dx = targetX - currentGridPos.x;
+        let dy = targetY - currentGridPos.y;
+
+        // Nur horizontaler Lauf (quer)
+        if (Math.abs(dy) < 0.1 && Math.abs(dx) > 0) {
+            // Erst schräg nach oben, dann schräg nach unten
+            let pivotX = currentGridPos.x + (dx / 2);
+            let pivotY = currentGridPos.y - 0.8; // Zieht ihn "nach hinten/oben"
             path.push({ x: pivotX, y: pivotY });
-        } else if (currentPos.gridY === targetGridY && currentPos.gridX !== targetGridX) {
-            // Horizontaler Lauf -> Ausweichschritt nach unten/oben
-            let pivotY = targetGridY === 4 ? 3 : targetGridY + 1;
-            let pivotX = Math.floor((currentPos.gridX + targetGridX) / 2);
+        } 
+        // Nur vertikaler Lauf (geradeaus nach unten/oben)
+        else if (Math.abs(dx) < 0.1 && Math.abs(dy) > 0) {
+            // Halber Weg diagonal zur Seite
+            let pivotX = currentGridPos.x === 3 ? currentGridPos.x - 0.6 : currentGridPos.x + 0.6;
+            let pivotY = currentGridPos.y + (dy / 2);
             path.push({ x: pivotX, y: pivotY });
         }
 
-        // Endziel hinzufügen
-        path.push({ x: targetGridX, y: targetGridY });
+        // Ziel
+        path.push({ x: targetX, y: targetY });
         return path;
     }
 
@@ -182,23 +274,23 @@
         if (currentPath.length === 0) {
             isMoving = false;
             stopWalkAnimation();
-            console.log("Angekommen!");
-            // HIER KOMMT SPÄTER DER BUDDEL-AUFRUF
             return;
         }
 
         const nextTarget = currentPath.shift();
-        const fieldEl = document.querySelector(`.field[data-x="${nextTarget.x}"][data-y="${nextTarget.y}"]`);
-        const targetCoords = getFieldCenter(fieldEl);
-
-        startWalkAnimation(currentPos.x, currentPos.y, targetCoords.x, targetCoords.y);
-
-        const startX = currentPos.x;
-        const startY = currentPos.y;
-        const startGridY = currentPos.gridY;
-        const targetGridY = nextTarget.y;
         
-        const duration = 1200; // 1.2 Sekunden pro Teilstrecke
+        const startCoords = getPixelCoordsFromGrid(currentGridPos.x, currentGridPos.y);
+        const targetCoords = getPixelCoordsFromGrid(nextTarget.x, nextTarget.y);
+
+        startWalkAnimation(startCoords.x, startCoords.y, targetCoords.x, targetCoords.y);
+
+        const startX = startCoords.x;
+        const startY = startCoords.y;
+        
+        // Geschwindigkeit anpassen: Kürzere Strecken (wie die Haken-Spitze) dauern nicht so lang
+        const distance = Math.sqrt(Math.pow(targetCoords.x - startX, 2) + Math.pow(targetCoords.y - startY, 2));
+        const duration = distance * 4; // Basisgeschwindigkeit
+        
         let startTime = null;
 
         function animate(time) {
@@ -206,19 +298,17 @@
             const elapsed = time - startTime;
             const progress = Math.min(elapsed / duration, 1);
 
-            // Interpolation der Werte
-            currentPos.x = startX + (targetCoords.x - startX) * progress;
-            currentPos.y = startY + (targetCoords.y - startY) * progress;
-            const currentGridYAnim = startGridY + (targetGridY - startGridY) * progress;
+            const currentPxX = startX + (targetCoords.x - startX) * progress;
+            const currentPxY = startY + (targetCoords.y - startY) * progress;
 
-            updateSchnabelVisuals(currentPos.x, currentPos.y, currentGridYAnim);
+            updateSchnabelVisuals(currentPxX, currentPxY);
 
             if (progress < 1) {
                 requestAnimationFrame(animate);
             } else {
-                currentPos.gridX = nextTarget.x;
-                currentPos.gridY = targetGridY;
-                moveNextSegment(); // Nächstes Stück vom Pfad ablaufen
+                currentGridPos.x = nextTarget.x;
+                currentGridPos.y = nextTarget.y;
+                moveNextSegment(); 
             }
         }
         requestAnimationFrame(animate);
@@ -232,8 +322,7 @@
             const tX = parseInt(e.target.dataset.x);
             const tY = parseInt(e.target.dataset.y);
 
-            // Verhindern, dass er auf das gleiche Feld klickt, auf dem er steht
-            if(tX === currentPos.gridX && tY === currentPos.gridY) return;
+            if(tX === currentGridPos.x && tY === currentGridPos.y) return;
 
             isMoving = true;
             currentPath = calculatePath(tX, tY);
