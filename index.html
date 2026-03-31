@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Buddel rum! (v0.21)</title>
+    <title>Buddel rum! (v0.22)</title>
     <style>
         body, html {
             margin: 0;
@@ -118,6 +118,7 @@
             transform: translate(var(--shift-x), var(--shift-y)) scale(var(--scale-correction)); 
             transform-origin: bottom center;
             display: block;
+            transition: transform 0.1s ease-in-out;
         }
 
         /* * --- CSS-PERFEKTIONS-KORREKTUREN --- * */
@@ -125,9 +126,9 @@
         /* Stehen */
         #schnabel[data-sprite="stehend"] { --shift-x: -50%; --scale-correction: 1; }
 
-        /* Rauchen - FIX für v0.21: Scale auf 1.0 gehalten, Position weiter nach links justiert */
-        #schnabel[data-sprite="rauchend_1"] { --shift-x: -50%; --scale-correction: 1; }
-        #schnabel[data-sprite="rauchend_2"] { --shift-x: -50.5%; --scale-correction: 1; }
+        /* Rauchen - FIX für v0.22: scale-correction leicht erhöht, damit er exakt so groß ist wie beim Stehen! */
+        #schnabel[data-sprite="rauchend_1"] { --shift-x: -50%; --scale-correction: 1.08; }
+        #schnabel[data-sprite="rauchend_2"] { --shift-x: -50.5%; --scale-correction: 1.08; }
 
         /* Laufen Vorwärts & Seitwärts */
         #schnabel[data-sprite="laufend_links_1"] { --shift-x: -50%; --scale-correction: 1; }
