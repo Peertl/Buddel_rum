@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Buddel rum! (v0.22)</title>
+    <title>Buddel rum! (v0.23)</title>
     <style>
         body, html {
             margin: 0;
@@ -126,20 +126,17 @@
         /* Stehen */
         #schnabel[data-sprite="stehend"] { --shift-x: -50%; --scale-correction: 1; }
 
-/* Rauchen */
-#schnabel[data-sprite="rauchend_1"] { 
-    --shift-x: -50%; 
-    --shift-y: 2%; /* Schiebt Bild 1 leicht nach unten */
-    --scale-correction: 1.05; /* Oder welchen Wert du für die Größe brauchst */
-}
-#schnabel[data-sprite="rauchend_2"] { 
-    --shift-x: -50.5%; 
-    --shift-y: 2%; /* Schiebt Bild 2 genauso weit nach unten */
-    --scale-correction: 1.05; 
-}
-
-}
-
+        /* Rauchen (Exakt nach deinen Werten) */
+        #schnabel[data-sprite="rauchend_1"] { 
+            --shift-x: -50%; 
+            --shift-y: 2%; 
+            --scale-correction: 1.05; 
+        }
+        #schnabel[data-sprite="rauchend_2"] { 
+            --shift-x: -50.5%; 
+            --shift-y: 2%; 
+            --scale-correction: 1.05; 
+        }
 
         /* Laufen Vorwärts & Seitwärts */
         #schnabel[data-sprite="laufend_links_1"] { --shift-x: -50%; --scale-correction: 1; }
