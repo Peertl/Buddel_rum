@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Buddel rum! (v0.37)</title>
+    <title>Buddel rum! (v0.38)</title>
     <style>
         /* Deaktiviert den blauen Klick-Schein auf mobilen Geräten */
         * { -webkit-tap-highlight-color: transparent; }
@@ -96,27 +96,27 @@
             flex-direction: column; color: #5a3d17; text-align: center;
         }
 
-        /* RESULT DISPLAY (Größer) */
+        /* RESULT DISPLAY (Schmaler & Höher) */
         #result-display {
             background-color: #d4a351; border: 8px solid #8b5a2b;
             border-radius: 20px; padding: 30px 20px; display: flex;
             flex-direction: column; align-items: center; justify-content: space-between;
             position: relative; box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-            width: 85vw; max-width: 400px; /* Fenster breiter machen */
-            min-height: 380px; /* Fenster höher machen */
+            width: 85vw; max-width: 380px; /* Exakt gleiche Breite wie Summary */
+            min-height: 450px; /* Deutlich höher für große Bilder */
         }
 
         .found-img { 
-            height: 220px; /* Bild von 140px auf 220px vergrößert! */
-            max-height: 40vh; /* Verhindert Abschneiden auf sehr kleinen Displays */
+            height: 260px; /* Bild nochmal deutlich vergrößert! */
+            max-height: 45vh; 
             width: auto; 
             max-width: 100%;
             object-fit: contain;
         }
-        
+
         .quote { 
             font-style: italic; font-weight: bold; margin: 15px 0 10px 0; 
-            font-size: 1.25rem; /* Schrift etwas größer */
+            font-size: 1.25rem; 
             min-height: 3em; display: flex; align-items: center; justify-content: center; 
         }
 
@@ -128,26 +128,23 @@
             text-shadow: 2px 2px 0px #5a3d17;
         }
 
-        /* SUMMARY DISPLAY (Größer) */
+        /* SUMMARY DISPLAY (Schmaler & Höher) */
         #summary-display {
             background-color: #d4a351; border: 8px solid #8b5a2b;
             border-radius: 20px; padding: 30px 25px; display: flex;
             flex-direction: column; align-items: center; position: relative;
             box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-            width: 90vw; max-width: 450px; /* Breiter */
+            width: 85vw; max-width: 380px; /* Exakt gleiche Breite wie Result */
+            min-height: 450px; /* Exakt gleiche Mindesthöhe wie Result */
             max-height: 95%; overflow-y: auto;
         }
 
         #finds-list { list-style: none; padding: 0; margin: 20px 0; width: 100%; }
         #finds-list li { display: flex; align-items: center; justify-content: center; margin-bottom: 12px; font-size: 1.4rem; font-weight: bold;}
-        .list-icon { 
-            width: 60px; /* Icons von 40px auf 60px vergrößert */
-            height: 60px; 
-            object-fit: contain; margin-right: 15px; 
-        }
+        .list-icon { width: 60px; height: 60px; object-fit: contain; margin-right: 15px; }
 
         .summary-header { display: flex; align-items: center; margin-top: 15px; border-top: 3px dashed #8b5a2b; padding-top: 20px; }
-        .total-currency-img { width: 70px; margin-right: 15px; } /* Geldrolle vergrößert */
+        .total-currency-img { width: 70px; margin-right: 15px; }
         .summary-title { font-size: 1.6rem; font-weight: bold; }
         .total-amount-text { font-size: 2.2rem; font-weight: 900; margin-top: 5px; }
 
