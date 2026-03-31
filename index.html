@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Buddel rum! (v0.47 - Tiefen-Wachstum)</title>
+    <title>Buddel rum! (v0.48 - Perfekte Loch-Position)</title>
     <style>
         /* Deaktiviert den blauen Klick-Schein auf mobilen Geräten */
         * { -webkit-tap-highlight-color: transparent; }
@@ -80,13 +80,16 @@
 
         /* EBENEN-LOGIK, POSITION UND ANIMATION DES LOCHS */
         .loch-img {
-            position: absolute; left: 45%;   
+            position: absolute; 
+            /* HIER POSITIONIEREN: Mittig (left 50%) und an der Spitze des Feldes (top 5-10%) */
+            left: 50%;   
+            top: 10%; 
             width: 90px; 
             pointer-events: none; z-index: 15; 
             transition: transform 0.2s ease-out; /* Lässt das Loch weich wachsen! */
             
-            /* ---- FIX: WACHSTUMS-ANKERPUNKT OBEN RECHTS (für Tiefen-Wachstum) ---- */
-            transform-origin: top right; 
+            /* Wachstums-Ankerpunkt zentriert am oberen Rand */
+            transform-origin: top center; 
         }
         .loch-img.latest-dug { z-index: 25; }
 
@@ -475,15 +478,10 @@
         loch.className = 'loch-img latest-dug';
         latestDugLochElement = loch;
         
-        // Vertikale Position berechnen (wie gehabt)
-        const bottomPos = 50 - (28 * currentScale);
-        loch.style.bottom = bottomPos + '%';
-        
-        // ---- FIX: HORIZONTALE POSITION FÜR ORIGIN TOP RIGHT ----
-        // Wir entfernen 'translateX(-50%)' aus dem JS-Style, da sich die Position 
-        // sonst beim Skalieren visuell verschiebt.
-        // Das CSS '.loch-img { left: 45%; }' sorgt für die Grundposition.
-        loch.style.transform = `scale(0)`; // Startet unsichtbar
+        // HIER POSITIONIEREN (Zusatz zu CSS):
+        // translateX zentriert das Loch horizontal genau auf der 50% Linie des CSS 'left' Werts.
+        // Die Skalierung wird für die Animation beigemischt.
+        loch.style.transform = `translateX(-50%) scale(0)`; // Startet unsichtbar
         
         fieldEl.appendChild(loch);
         
@@ -491,16 +489,15 @@
             step = step === 1 ? 2 : 1; setSchnabelImage(`Buddel-Bursche_buddelnd-${step}.png`, `buddelnd_${step}`);
             elapsed += 500;
             
-            // Loch wächst dynamisch mit der Zeit, Origin ist Oben Rechts (CSS)
-            // KEIN 'translateX(-50%)' hier, damit der Anker fix bleibt!
+            // Loch wächst dynamisch mit der Zeit, bleibt durch translateX mittig!
             if (elapsed === 500) {
-                loch.style.transform = `scale(${currentScale * 0.30})`;
+                loch.style.transform = `translateX(-50%) scale(${currentScale * 0.30})`;
             } else if (elapsed === 1500) {
-                loch.style.transform = `scale(${currentScale * 0.60})`;
+                loch.style.transform = `translateX(-50%) scale(${currentScale * 0.60})`;
             } else if (elapsed === 2500) {
-                loch.style.transform = `scale(${currentScale * 0.85})`;
+                loch.style.transform = `translateX(-50%) scale(${currentScale * 0.85})`;
             } else if (elapsed === 3500) {
-                loch.style.transform = `scale(${currentScale * 1.0})`;
+                loch.style.transform = `translateX(-50%) scale(${currentScale * 1.0})`;
             }
             
             if (elapsed >= 4000) { clearInterval(digActionInterval); finishDigging(); }
