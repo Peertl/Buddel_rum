@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Buddel rum! (v0.43 - Intro Walk)</title>
+    <title>Buddel rum! (v0.44 - Buddel Animation)</title>
     <style>
         /* Deaktiviert den blauen Klick-Schein auf mobilen Geräten */
         * { -webkit-tap-highlight-color: transparent; }
@@ -78,11 +78,12 @@
             100% { opacity: 0; transform: translate(-50%, -50%) rotateX(60deg) scale(1.3); }
         }
 
-        /* EBENEN-LOGIK & POSITION DES LOCHS */
+        /* EBENEN-LOGIK, POSITION UND ANIMATION DES LOCHS */
         .loch-img {
             position: absolute; left: 45%;   
             width: 90px; transform-origin: bottom center;
             pointer-events: none; z-index: 15; 
+            transition: transform 0.2s ease-out; /* Lässt das Loch weich wachsen! */
         }
         .loch-img.latest-dug { z-index: 25; }
 
@@ -154,7 +155,7 @@
 
         #restart-btn { font-size: 1.3rem; padding: 12px 25px; margin-top: 25px; white-space: nowrap; background-color: #5a3d17; }
 
-        /* Buddeln Button (Grauer Zustand entfernt, stattdessen display: none als Basis) */
+        /* Buddeln Button */
         #btn-buddeln {
             position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
             font-family: 'Comic Sans MS', sans-serif; font-size: 1.5rem;
@@ -163,6 +164,7 @@
             padding: 10px 40px; cursor: pointer; z-index: 30; text-shadow: 2px 2px 0px #5a3d17;
             display: none; 
         }
+        #btn-buddeln:disabled { background-color: #b09a83; color: #e0d6cb; cursor: not-allowed; }
 
         /* Anleitung Overlay Panel */
         #instructions-layer { z-index: 9500; }
@@ -350,7 +352,7 @@
         document.querySelectorAll('.overlay-layer').forEach(l => l.style.display = 'none');
         startScreen.style.display = 'none'; 
         
-        btnBuddeln.style.display = 'none'; // Direkt verstecken
+        btnBuddeln.style.display = 'none'; 
         
         inventory = [];
         dugFields.clear();
@@ -373,11 +375,8 @@
         
         if (moveAnimFrame) { cancelAnimationFrame(moveAnimFrame); moveAnimFrame = null; }
         
-        // ---- INTRO WALK ANIMATION ----
-        isMoving = true; // Sperrt Inputs während des Einlaufens
+        isMoving = true; 
         const targetCoords = getPixelCoordsFromGrid(1, 0.5);
-        
-        // Schnabel startet bei -150px (links im Off)
         const startPxX = -150;
         const startPxY = targetCoords.y;
         
@@ -393,7 +392,7 @@
         }, 180);
 
         const dx = targetCoords.x - startPxX;
-        const duration = 1500; // Dauert 1.5 Sekunden
+        const duration = 1500; 
         let startTime = null;
 
         function animateIntro(time) {
@@ -448,34 +447,25 @@
         }, 3000);
     }
 
-    // Zeigt den Button nur, wenn er auf einem buddelbaren Feld steht
     function updateButtonState() {
         const key = `${currentGridPos.x}-${currentGridPos.y}`;
-        
         const canDig = !isMoving && !isDigging && !showingResult && currentGridPos.y !== 0.5 && !dugFields.has(key) && dugFields.size < 3;
 
         if (canDig) {
             btnBuddeln.style.display = 'block';
         } else {
-            btnBuddeln.style.display = 'none'; // Versteckt den Button statt ihn grau zu machen
+            btnBuddeln.style.display = 'none'; 
         }
     }
 
     btnBuddeln.addEventListener('click', () => {
         isDigging = true; updateButtonState(); stopAllTimers();
+        
         let step = 1, elapsed = 0;
         setSchnabelImage(`Buddel-Bursche_buddelnd-${step}.png`, `buddelnd_${step}`);
         
-        digActionInterval = setInterval(() => {
-            step = step === 1 ? 2 : 1; setSchnabelImage(`Buddel-Bursche_buddelnd-${step}.png`, `buddelnd_${step}`);
-            elapsed += 500;
-            if (elapsed >= 4000) { clearInterval(digActionInterval); finishDigging(); }
-        }, 500);
-    });
-
-    function finishDigging() {
+        // ---- NEU: LOCH WIRD DIREKT ERSTELLT UND WÄCHST ----
         const fieldEl = document.querySelector(`.field[data-x="${currentGridPos.x}"][data-y="${currentGridPos.y}"]`);
-        dugFields.add(`${currentGridPos.x}-${currentGridPos.y}`);
         const coords = getPixelCoordsFromGrid(currentGridPos.x, currentGridPos.y);
         const currentScale = updateSchnabelVisuals(coords.x, coords.y);
         
@@ -486,12 +476,37 @@
         
         const bottomPos = 50 - (28 * currentScale);
         loch.style.bottom = bottomPos + '%';
-        loch.style.transform = `translateX(-50%) scale(${currentScale})`; 
+        loch.style.transform = `translateX(-50%) scale(0)`; // Startet unsichtbar
         fieldEl.appendChild(loch);
+        
+        digActionInterval = setInterval(() => {
+            step = step === 1 ? 2 : 1; setSchnabelImage(`Buddel-Bursche_buddelnd-${step}.png`, `buddelnd_${step}`);
+            elapsed += 500;
+            
+            // Loch wächst dynamisch mit der Zeit
+            if (elapsed === 500) {
+                loch.style.transform = `translateX(-50%) scale(${currentScale * 0.30})`;
+            } else if (elapsed === 1500) {
+                loch.style.transform = `translateX(-50%) scale(${currentScale * 0.60})`;
+            } else if (elapsed === 2500) {
+                loch.style.transform = `translateX(-50%) scale(${currentScale * 0.85})`;
+            } else if (elapsed === 3500) {
+                loch.style.transform = `translateX(-50%) scale(${currentScale * 1.0})`;
+            }
+            
+            if (elapsed >= 4000) { clearInterval(digActionInterval); finishDigging(); }
+        }, 500);
+    });
+
+    function finishDigging() {
+        dugFields.add(`${currentGridPos.x}-${currentGridPos.y}`);
+        
+        // Das Loch existiert nun bereits und hat seine volle Größe erreicht
 
         setSchnabelImage('Buddel-Bursche-Hurra.png', 'hurra');
         showingResult = true; updateButtonState();
 
+        const fieldEl = document.querySelector(`.field[data-x="${currentGridPos.x}"][data-y="${currentGridPos.y}"]`);
         const itemKey = gameItems[parseInt(fieldEl.dataset.index) - 1];
         const item = findItems[itemKey];
         inventory.push(itemKey);
@@ -568,7 +583,7 @@
     function moveToTarget(tX, tY) {
         stopAllTimers(); 
         isMoving = true;
-        updateButtonState(); // Versteckt sofort den Buddeln-Button beim Loslaufen!
+        updateButtonState(); 
         
         if (moveAnimFrame) {
             cancelAnimationFrame(moveAnimFrame);
