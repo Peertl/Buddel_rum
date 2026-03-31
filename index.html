@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Buddel rum! (v0.36)</title>
+    <title>Buddel rum! (v0.37)</title>
     <style>
         /* Deaktiviert den blauen Klick-Schein auf mobilen Geräten */
         * { -webkit-tap-highlight-color: transparent; }
@@ -61,7 +61,6 @@
         /* EBENEN-LOGIK & POSITION DES LOCHS */
         .loch-img {
             position: absolute; 
-            /* 'bottom' wird jetzt dynamisch im JavaScript berechnet! */
             left: 45%;   
             width: 90px; 
             transform-origin: bottom center;
@@ -97,45 +96,62 @@
             flex-direction: column; color: #5a3d17; text-align: center;
         }
 
-        /* RESULT DISPLAY */
+        /* RESULT DISPLAY (Größer) */
         #result-display {
             background-color: #d4a351; border: 8px solid #8b5a2b;
-            border-radius: 20px; padding: 25px 20px; display: flex;
+            border-radius: 20px; padding: 30px 20px; display: flex;
             flex-direction: column; align-items: center; justify-content: space-between;
             position: relative; box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-            min-width: 260px; min-height: 280px; 
+            width: 85vw; max-width: 400px; /* Fenster breiter machen */
+            min-height: 380px; /* Fenster höher machen */
         }
 
-        .found-img { height: 140px; width: auto; max-width: 100%; object-fit: contain; }
-        .quote { font-style: italic; font-weight: bold; margin: 10px 0; font-size: 1.1rem; min-height: 3em; display: flex; align-items: center; justify-content: center; }
+        .found-img { 
+            height: 220px; /* Bild von 140px auf 220px vergrößert! */
+            max-height: 40vh; /* Verhindert Abschneiden auf sehr kleinen Displays */
+            width: auto; 
+            max-width: 100%;
+            object-fit: contain;
+        }
+        
+        .quote { 
+            font-style: italic; font-weight: bold; margin: 15px 0 10px 0; 
+            font-size: 1.25rem; /* Schrift etwas größer */
+            min-height: 3em; display: flex; align-items: center; justify-content: center; 
+        }
 
         .run-btn {
             font-family: 'Comic Sans MS', sans-serif; font-size: 1.5rem;
             font-weight: bold; color: #fff; background-color: #8b5a2b;
             border: 4px solid #5a3d17; border-radius: 15px;
-            padding: 8px 30px; cursor: pointer; margin-top: auto;
+            padding: 8px 40px; cursor: pointer; margin-top: auto;
             text-shadow: 2px 2px 0px #5a3d17;
         }
 
-        /* SUMMARY DISPLAY */
+        /* SUMMARY DISPLAY (Größer) */
         #summary-display {
             background-color: #d4a351; border: 8px solid #8b5a2b;
-            border-radius: 20px; padding: 20px 25px; display: flex;
+            border-radius: 20px; padding: 30px 25px; display: flex;
             flex-direction: column; align-items: center; position: relative;
             box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-            max-width: 85%; max-height: 90%; overflow-y: auto;
+            width: 90vw; max-width: 450px; /* Breiter */
+            max-height: 95%; overflow-y: auto;
         }
 
-        #finds-list { list-style: none; padding: 0; margin: 15px 0; width: 100%; }
-        #finds-list li { display: flex; align-items: center; justify-content: center; margin-bottom: 8px; font-size: 1.2rem; font-weight: bold;}
-        .list-icon { width: 40px; height: 40px; object-fit: contain; margin-right: 10px; }
+        #finds-list { list-style: none; padding: 0; margin: 20px 0; width: 100%; }
+        #finds-list li { display: flex; align-items: center; justify-content: center; margin-bottom: 12px; font-size: 1.4rem; font-weight: bold;}
+        .list-icon { 
+            width: 60px; /* Icons von 40px auf 60px vergrößert */
+            height: 60px; 
+            object-fit: contain; margin-right: 15px; 
+        }
 
-        .summary-header { display: flex; align-items: center; margin-top: 10px; border-top: 3px dashed #8b5a2b; padding-top: 15px; }
-        .total-currency-img { width: 55px; margin-right: 15px; }
-        .summary-title { font-size: 1.4rem; font-weight: bold; }
-        .total-amount-text { font-size: 1.8rem; font-weight: 900; margin-top: 5px; }
+        .summary-header { display: flex; align-items: center; margin-top: 15px; border-top: 3px dashed #8b5a2b; padding-top: 20px; }
+        .total-currency-img { width: 70px; margin-right: 15px; } /* Geldrolle vergrößert */
+        .summary-title { font-size: 1.6rem; font-weight: bold; }
+        .total-amount-text { font-size: 2.2rem; font-weight: 900; margin-top: 5px; }
 
-        #restart-btn { font-size: 1.1rem; padding: 10px 20px; margin-top: 20px; white-space: nowrap; background-color: #5a3d17; }
+        #restart-btn { font-size: 1.3rem; padding: 12px 25px; margin-top: 25px; white-space: nowrap; background-color: #5a3d17; }
 
         #btn-buddeln {
             position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
@@ -188,7 +204,7 @@
 
     <div id="summary-layer" class="overlay-layer">
         <div id="summary-display">
-            <h2 style="margin-top:0; font-size: 1.8rem; margin-bottom: 10px;">Expedition beendet!</h2>
+            <h2 style="margin-top:0; font-size: 2rem; margin-bottom: 10px;">Expedition beendet!</h2>
             <ul id="finds-list"></ul>
             
             <div class="summary-header">
@@ -362,13 +378,8 @@
         loch.className = 'loch-img latest-dug';
         latestDugLochElement = loch;
         
-        // ---- DYNAMISCHE PERSPEKTIVE FÜR DIE LOCH-HÖHE ----
-        // 50 ist die Mitte (Füße), 28 ist der Abstandsabzug.
-        // Bei Scale 1.0 (Vorne): 50 - 28 = 22% (perfekt!)
-        // Bei Scale 0.5 (Hinten): 50 - 14 = 36% (rutscht höher und passt!)
         const bottomPos = 50 - (28 * currentScale);
         loch.style.bottom = bottomPos + '%';
-        
         loch.style.transform = `translateX(-50%) scale(${currentScale})`; 
         fieldEl.appendChild(loch);
 
