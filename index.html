@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Buddel rum! (v0.28)</title>
+    <title>Buddel rum! (v0.29)</title>
     <style>
         /* Deaktiviert den blauen Klick-Schein auf mobilen Geräten */
         * {
@@ -96,11 +96,11 @@
             border-radius: 20px; padding: 25px 20px; display: flex;
             flex-direction: column; align-items: center; justify-content: space-between;
             position: relative; box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-            min-width: 260px; min-height: 280px; /* Zwingt das Fenster auf eine feste Größe */
+            min-width: 260px; min-height: 280px; 
         }
 
         .found-img { 
-            height: 140px; /* Feste Höhe, damit Bilder (auch Niete) gleich groß wirken */
+            height: 140px; 
             width: auto; 
             max-width: 100%;
             object-fit: contain;
@@ -109,7 +109,7 @@
         .quote { 
             font-style: italic; font-weight: bold; margin: 10px 0; 
             font-size: 1.1rem; 
-            min-height: 3em; /* Reserviert Platz für 2 Zeilen Text, verhindert Springen */
+            min-height: 3em; 
             display: flex; align-items: center; justify-content: center;
         }
 
@@ -143,10 +143,10 @@
 
         /* Einzeiliger, flacherer Restart-Button */
         #restart-btn {
-            font-size: 1.1rem; /* Kleinere Schrift */
+            font-size: 1.1rem; 
             padding: 10px 20px; 
             margin-top: 20px;
-            white-space: nowrap; /* Zwingt den Text in eine Zeile! */
+            white-space: nowrap; 
             background-color: #5a3d17;
         }
 
@@ -211,7 +211,7 @@
             </div>
             <div id="final-sum-text" class="total-amount-text">0 Rollen</div>
             
-            <button id="restart-btn" class="run-btn">Neue Expedition starten</button>
+            <button id="restart-btn" class="run-btn" style="background-color: #5a3d17;">Neue Expedition starten</button>
         </div>
     </div>
 </div>
@@ -226,11 +226,14 @@
     ];
     let loadedImages = 0;
     
+    // Item-Datenbank
     const findItems = {
         'niete': { img: 'Niete.png', text: '', value: 0 },
         'kanope': { img: 'Kanope_Anubis_Stil-1.png', text: '"Die wird mir eine schöne Rolle Geld einbringen!"', value: 1 }
     };
 
+    // DOM Elemente (Die fehlenden Felder sind wieder da!)
+    const fields = document.querySelectorAll('.field');
     const schnabel = document.getElementById('schnabel');
     const schnabelImg = document.getElementById('schnabel-img');
     const schnabelScaleWrapper = document.getElementById('schnabel-scale-wrapper');
@@ -268,8 +271,9 @@
         dugFields.clear();
         document.querySelectorAll('.loch-img').forEach(img => img.remove());
         
-        // Loot verteilen: 4 Nieten, 8 Kanopen
-        gameItems = Array(4).fill('niete').concat(Array(8).fill('kanope')).sort(() => Math.random() - 0.5);
+        // Loot verteilen: 4 Nieten, 8 Kanopen -> Zufällig mischen
+        gameItems = Array(4).fill('niete').concat(Array(8).fill('kanope'));
+        gameItems.sort(() => Math.random() - 0.5);
         
         currentGridPos = { x: 1, y: 0.5 };
         isDigging = false; isMoving = false; showingResult = false;
@@ -348,7 +352,7 @@
         document.getElementById('found-item-img').src = item.img;
         document.getElementById('found-quote').innerText = item.text;
         
-        // 1 Sekunde Verzögerung für die Hurra-Animation!
+        // 1 Sekunde Jubeln bevor das Fenster kommt
         setTimeout(() => {
             document.getElementById('result-layer').style.display = 'flex';
         }, 1000);
@@ -412,23 +416,15 @@
         requestAnimationFrame(animate);
     }
 
-    // Felder: X Markierung zentriert und Bewegung starten
     fields.forEach(field => {
         field.addEventListener('click', (e) => {
-            if (isMoving || isDigging || showingResult || dugFields.size >= 3) return;
-
-            const tX = parseInt(field.dataset.x);
-            const tY = parseInt(field.dataset.y);
-
-            // Verhindern, dass er auf das gleiche Feld läuft
-            if(tX === currentGridPos.x && tY === currentGridPos.y) return;
-
-            // X generieren: Positioniert sich exakt in der Mitte des angeklickten HTML-Feldes (.field)
+            // DAS X WIRD IMMER GENERIERT, auch wenn Schnabel läuft (als sofortiges Feedback)
             const xMark = document.createElement('div');
             xMark.className = 'tap-x'; xMark.innerText = 'X';
             
             const rect = field.getBoundingClientRect();
             const containerRect = gameContainer.getBoundingClientRect();
+            // Exakt die mathematische Mitte des Feldes berechnen
             const centerX = (rect.left - containerRect.left) + rect.width / 2;
             const centerY = (rect.top - containerRect.top) + rect.height / 2;
             
@@ -437,6 +433,14 @@
             gameContainer.appendChild(xMark);
             
             setTimeout(() => xMark.remove(), 500);
+
+            // Bewegung nur ausführen, wenn er bereit ist
+            if (isMoving || isDigging || showingResult || dugFields.size >= 3) return;
+
+            const tX = parseInt(field.dataset.x);
+            const tY = parseInt(field.dataset.y);
+
+            if(tX === currentGridPos.x && tY === currentGridPos.y) return;
 
             isMoving = true; 
             moveToTarget(tX, tY);
