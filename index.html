@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Buddel rum! (v0.42 - Dynamic Movement)</title>
+    <title>Buddel rum! (v0.43 - Intro Walk)</title>
     <style>
         /* Deaktiviert den blauen Klick-Schein auf mobilen Geräten */
         * { -webkit-tap-highlight-color: transparent; }
@@ -111,6 +111,7 @@
             flex-direction: column; color: #5a3d17; text-align: center;
         }
 
+        /* Gemeinsame Klasse für alle Fund/Summary Panels */
         .overlay-panel {
             background-color: #d4a351; border: 8px solid #8b5a2b;
             border-radius: 20px; padding: 30px 20px; display: flex;
@@ -153,16 +154,15 @@
 
         #restart-btn { font-size: 1.3rem; padding: 12px 25px; margin-top: 25px; white-space: nowrap; background-color: #5a3d17; }
 
-        /* Buddeln Button */
+        /* Buddeln Button (Grauer Zustand entfernt, stattdessen display: none als Basis) */
         #btn-buddeln {
             position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
             font-family: 'Comic Sans MS', sans-serif; font-size: 1.5rem;
             font-weight: bold; color: #fff; background-color: #8b5a2b;
             border: 4px solid #5a3d17; border-radius: 15px;
             padding: 10px 40px; cursor: pointer; z-index: 30; text-shadow: 2px 2px 0px #5a3d17;
-            display: none; /* Am Anfang ausgeblendet */
+            display: none; 
         }
-        #btn-buddeln:disabled { background-color: #b09a83; color: #e0d6cb; cursor: not-allowed; }
 
         /* Anleitung Overlay Panel */
         #instructions-layer { z-index: 9500; }
@@ -225,7 +225,7 @@
         </div>
     </div>
 
-    <button id="btn-buddeln" disabled>Buddeln</button>
+    <button id="btn-buddeln">Buddeln</button>
 
     <div id="result-layer" class="overlay-layer">
         <div id="result-display" class="overlay-panel">
@@ -307,7 +307,7 @@
     let currentGridPos = { x: 1, y: 0.5 }, targetGridPos = { x: 1, y: 0.5 };
     let dugFields = new Set(), inventory = [], gameItems = [];
     let idleTimer = null, smokeInterval = null, digActionInterval = null;
-    let moveAnimFrame = null; // Für das Abbrechen der Laufen-Animation
+    let moveAnimFrame = null; 
     
     let latestDugLochElement = null; 
 
@@ -350,6 +350,8 @@
         document.querySelectorAll('.overlay-layer').forEach(l => l.style.display = 'none');
         startScreen.style.display = 'none'; 
         
+        btnBuddeln.style.display = 'none'; // Direkt verstecken
+        
         inventory = [];
         dugFields.clear();
         
@@ -367,16 +369,51 @@
         
         currentGridPos = { x: 1, y: 0.5 };
         targetGridPos = { x: 1, y: 0.5 };
-        isDigging = false; isMoving = false; showingResult = false;
+        isDigging = false; showingResult = false;
         
         if (moveAnimFrame) { cancelAnimationFrame(moveAnimFrame); moveAnimFrame = null; }
         
-        setSchnabelImage('Schnabel_stehend.png', 'stehend');
+        // ---- INTRO WALK ANIMATION ----
+        isMoving = true; // Sperrt Inputs während des Einlaufens
+        const targetCoords = getPixelCoordsFromGrid(1, 0.5);
         
-        const coords = getPixelCoordsFromGrid(1, 0.5);
-        updateSchnabelVisuals(coords.x, coords.y);
-        updateButtonState();
-        startIdleTimer();
+        // Schnabel startet bei -150px (links im Off)
+        const startPxX = -150;
+        const startPxY = targetCoords.y;
+        
+        updateSchnabelVisuals(startPxX, startPxY);
+        
+        currentDirection = "rechts";
+        walkStep = 1;
+        setSchnabelImage(`Schnabel_laufend_${currentDirection}_${walkStep}.png`, `laufend_${currentDirection}_${walkStep}`);
+        
+        walkInterval = setInterval(() => {
+            walkStep = walkStep === 1 ? 2 : 1;
+            setSchnabelImage(`Schnabel_laufend_${currentDirection}_${walkStep}.png`, `laufend_${currentDirection}_${walkStep}`);
+        }, 180);
+
+        const dx = targetCoords.x - startPxX;
+        const duration = 1500; // Dauert 1.5 Sekunden
+        let startTime = null;
+
+        function animateIntro(time) {
+            if (!startTime) startTime = time;
+            const progress = Math.min((time - startTime) / duration, 1);
+            
+            updateSchnabelVisuals(startPxX + dx * progress, startPxY);
+            
+            if (progress < 1) {
+                moveAnimFrame = requestAnimationFrame(animateIntro);
+            } else {
+                isMoving = false; 
+                moveAnimFrame = null;
+                clearInterval(walkInterval);
+                setSchnabelImage('Schnabel_stehend.png', 'stehend');
+                updateButtonState(); 
+                startIdleTimer();
+            }
+        }
+        moveAnimFrame = requestAnimationFrame(animateIntro);
     }
 
     function getPixelCoordsFromGrid(gX, gY) {
@@ -411,21 +448,16 @@
         }, 3000);
     }
 
+    // Zeigt den Button nur, wenn er auf einem buddelbaren Feld steht
     function updateButtonState() {
         const key = `${currentGridPos.x}-${currentGridPos.y}`;
-        const isStart = (currentGridPos.y === 0.5);
+        
+        const canDig = !isMoving && !isDigging && !showingResult && currentGridPos.y !== 0.5 && !dugFields.has(key) && dugFields.size < 3;
 
-        // Blende Button am Start aus
-        if (isStart || dugFields.size >= 3) {
-            btnBuddeln.style.display = 'none';
-        } else {
+        if (canDig) {
             btnBuddeln.style.display = 'block';
-        }
-
-        if (!isMoving && !isDigging && !showingResult && !isStart && !dugFields.has(key) && dugFields.size < 3) {
-            btnBuddeln.disabled = false;
         } else {
-            btnBuddeln.disabled = true;
+            btnBuddeln.style.display = 'none'; // Versteckt den Button statt ihn grau zu machen
         }
     }
 
@@ -536,13 +568,12 @@
     function moveToTarget(tX, tY) {
         stopAllTimers(); 
         isMoving = true;
-        updateButtonState(); 
+        updateButtonState(); // Versteckt sofort den Buddeln-Button beim Loslaufen!
         
         if (moveAnimFrame) {
             cancelAnimationFrame(moveAnimFrame);
         }
 
-        // Finde die aktuelle physische Position auf dem Bildschirm (falls er schon lief)
         let startPxX, startPxY;
         if (schnabel.style.left && schnabel.style.top) {
             startPxX = parseFloat(schnabel.style.left);
@@ -580,7 +611,7 @@
         }, 180); 
 
         const dist = Math.sqrt(dx*dx + dy*dy);
-        if (dist < 1) return; // Überspringen, falls schon da
+        if (dist < 1) return; 
 
         const avgScaleBase = (updateSchnabelVisuals(startPxX, startPxY) + updateSchnabelVisuals(targetCoords.x, targetCoords.y)) / 2;
         const duration = (dist * 6) / avgScaleBase; 
@@ -627,13 +658,11 @@
             
             setTimeout(() => xMark.remove(), 500);
 
-            // "isMoving" wurde aus der Sperre entfernt, damit man ihn umleiten kann!
             if (isDigging || showingResult || dugFields.size >= 3 || schnabel.dataset.sprite === 'kritzelnd' || schnabel.dataset.sprite === 'haltend') return;
 
             const tX = parseInt(field.dataset.x);
             const tY = parseInt(field.dataset.y);
 
-            // Verhindert das Neuladen der Animation, wenn er eh schon exakt dahin unterwegs ist
             if(tX === targetGridPos.x && tY === targetGridPos.y) return;
 
             targetGridPos = { x: tX, y: tY };
