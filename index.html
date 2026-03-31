@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Buddel rum! (v0.32 - Schatz-Update)</title>
+    <title>Buddel rum! (v0.33 - Herbertep Update)</title>
     <style>
         /* Deaktiviert den blauen Klick-Schein auf mobilen Geräten */
         * { -webkit-tap-highlight-color: transparent; }
@@ -228,22 +228,26 @@
         'Schnabel_rauchend_1.png', 'Schnabel_rauchend_2.png', 'Buddel-Bursche_buddelnd-1.png', 'Buddel-Bursche_buddelnd-2.png',
         'Buddel-Bursche-Hurra.png', 'Loch_neu.png', 'Währung.png', 'Kanope_Anubis_Stil-1.png', 'Niete.png',
         'Buddel-Bursche_kritzelnd.png', 'Buddel-Bursche_Penoi.png', 'Pergament_Penoi.png', 'Pergament.png',
-        'Kanope_C3PO_Stil-2.png', 'Kanope_Dino_Stil-2.png', 'No_Fritteuse.png', 'Relief_Ailiens_Dino.png', 'Rosetta_un.png'
+        'Kanope_C3PO_Stil-2.png', 'Kanope_Dino_Stil-2.png', 'No_Fritteuse.png', 'Relief_Ailiens_Dino.png', 'Rosetta_un.png',
+        'Relief_Herbertep.png', 'Kanope_Herbertep_Stil-2.png', 'Herbertep.png', 'Dinosaurier.png'
     ];
     let loadedImages = 0;
     
-    // Item-Datenbank (inklusive aller neuen Schätze & Niete & Pergament-Prozess)
+    // Item-Datenbank (inklusive ALLER Schätze)
     const findItems = {
         'niete': { img: 'Niete.png', text: '', value: 0 },
-        'kanope': { img: 'Kanope_Anubis_Stil-1.png', text: '"Die wird mir eine schöne Rolle Geld einbringen"', value: 1 },
+        'kanope': { img: 'Kanope_Anubis_Stil-1.png', text: '"Die wird mir eine schöne Rolle Geld einbringen!"', value: 1 },
         'pergament': { img: 'Pergament.png', text: '"Molto! Aber so bekomme ich dafür ja höchstens eine Rolle"', value: 0, buttonText: "Aufwerten" },
         'pergament-penoi': { img: 'Pergament_Penoi.png', text: '"Besser!"', value: 3, buttonText: "un!" },
-        // Neue Schätze v0.32
         'kanope_c3po': { img: 'Kanope_C3PO_Stil-2.png', text: '"Das ist mir neu..."', value: 2 },
         'kanope_dino': { img: 'Kanope_Dino_Stil-2.png', text: '"Das ist mir neu..."', value: 2 },
         'relief_aliens': { img: 'Relief_Ailiens_Dino.png', text: '"Ich wusste es!"', value: 5 },
         'no_fritteuse': { img: 'No_Fritteuse.png', text: '"Wieder nur Werbung"', value: 4 },
-        'rosetta': { img: 'Rosetta_un.png', text: '"Pupel-Sprache ist also nicht nur edel, sondern auch schon sehr alt"', value: 6 }
+        'rosetta': { img: 'Rosetta_un.png', text: '"Pupel-Sprache ist also nicht nur edel, sondern auch schon sehr alt"', value: 6 },
+        'relief_herbertep': { img: 'Relief_Herbertep.png', text: '"Herbertep war schon damals ein Gott."', value: 7 },
+        'kanope_herbertep': { img: 'Kanope_Herbertep_Stil-2.png', text: '"Mensch! Das ist selten."', value: 4 },
+        'mumie_herbertep': { img: 'Herbertep.png', text: '"Herbertep! Es gab ihn wirklich!"', value: 10 },
+        'dinosaurier': { img: 'Dinosaurier.png', text: '"Oh!"', value: 2 }
     };
 
     const fields = document.querySelectorAll('.field');
@@ -269,7 +273,7 @@
     let currentGridPos = { x: 1, y: 0.5 }, dugFields = new Set(), inventory = [], gameItems = [];
     let idleTimer = null, smokeInterval = null, digActionInterval = null;
     
-    let latestDugLochElement = null; // Speichert das Loch, vor dem Schnabel gerade sitzt
+    let latestDugLochElement = null; 
 
     function imageLoaded() {
         loadedImages++;
@@ -295,16 +299,26 @@
         inventory = [];
         dugFields.clear();
         
-        // Alle Löcher entfernen
         document.querySelectorAll('.loch-img').forEach(img => img.remove());
         latestDugLochElement = null;
         
-        // Loot verteilen: 12 Felder -> Mix aus Niete, Pergament und den 7 Schätzen
-        // Strategie: 4 Nieten, 1 Pergament (wichtig), und die anderen 7 Slots aus den Schätzen auffüllen (Zufällig gemischt)
-        let specialItems = ['niete','niete','niete','niete','pergament','kanope','kanope','kanope_c3po','kanope_dino','relief_aliens','no_fritteuse','rosetta'];
+        // POOL ALLER SCHÄTZE (ohne Niete und Pergament, die behandeln wir extra)
+        let treasurePool = [
+            'kanope', 'kanope_c3po', 'kanope_dino', 'relief_aliens', 'no_fritteuse', 
+            'rosetta', 'relief_herbertep', 'kanope_herbertep', 'mumie_herbertep', 'dinosaurier'
+        ];
         
-        // Zufällig mischen
-        gameItems = specialItems.sort(() => Math.random() - 0.5); 
+        // Mische die Schätze gut durch
+        treasurePool.sort(() => Math.random() - 0.5); 
+        
+        // Wähle die ersten 7 Schätze für diese Runde aus
+        let selectedTreasures = treasurePool.slice(0, 7);
+        
+        // Füge 4 Nieten und 1 Pergament hinzu, um 12 Felder zu füllen
+        gameItems = ['niete', 'niete', 'niete', 'niete', 'pergament'].concat(selectedTreasures);
+        
+        // Mische das gesamte Board durch
+        gameItems.sort(() => Math.random() - 0.5); 
         
         currentGridPos = { x: 1, y: 0.5 };
         isDigging = false; isMoving = false; showingResult = false;
@@ -336,7 +350,6 @@
 
     function startIdleTimer() {
         stopAllTimers();
-        // Kein Rauchen während Schnabel ein Fund-Fenster ansieht oder kritzelnd/haltend am Boden sitzt
         if (currentGridPos.y === 0.5 || showingResult || schnabel.dataset.sprite === 'kritzelnd' || schnabel.dataset.sprite === 'haltend') return;
         
         idleTimer = setTimeout(() => {
@@ -372,13 +385,12 @@
         const coords = getPixelCoordsFromGrid(currentGridPos.x, currentGridPos.y);
         const currentScale = updateSchnabelVisuals(coords.x, coords.y);
         
-        // Loch rendern (Verwende neues Loch, NICHT gespiegelt)
+        // Loch rendern (Loch_neu.png OHNE Spiegelung)
         const loch = document.createElement('img');
         loch.src = 'Loch_neu.png'; 
         loch.className = 'loch-img latest-dug';
         latestDugLochElement = loch;
         
-        // WICHTIG: scaleX(-1) ENTFERNT, nur mathematische Skalierung beibehalten
         loch.style.transform = `translateX(-50%) scale(${currentScale})`; 
         fieldEl.appendChild(loch);
 
@@ -387,14 +399,13 @@
 
         const itemKey = gameItems[parseInt(fieldEl.dataset.index) - 1];
         const item = findItems[itemKey];
-        // Das Pergament zählt nicht mit in die Rollen-Summe, Pergament-Penoi zählt.
         inventory.push(itemKey);
 
         document.getElementById('found-item-img').src = item.img;
         document.getElementById('found-quote').innerText = item.text;
         confirmFindBtn.innerText = item.buttonText || "un!"; 
         
-        // 1 Sekunde Verzögerung für die Hurra-Animation!
+        // 1 Sekunde Verzögerung für die Hurra-Animation
         setTimeout(() => {
             resultLayer.style.display = 'flex';
         }, 1000);
@@ -405,7 +416,7 @@
         
         // Logik: "Aufwerten" gedrückt
         if(confirmFindBtn.innerText === "Aufwerten") {
-            foundQuote.innerText = ""; // Spruch löschen
+            foundQuote.innerText = ""; 
             setSchnabelImage('Buddel-Bursche_kritzelnd.png', 'kritzelnd'); 
             
             setTimeout(() => {
@@ -427,7 +438,6 @@
             // Logik: "un!" gedrückt
             showingResult = false; isDigging = false;
             
-            // Loch fällt in den Hintergrund
             if(latestDugLochElement) {
                 latestDugLochElement.classList.remove('latest-dug');
             }
@@ -442,12 +452,10 @@
     });
 
     function showSummary() {
-        const list = document.getElementById('finds-list');
-        list.innerHTML = '';
+        findsList.innerHTML = '';
         let total = 0;
         
         inventory.forEach(key => {
-            // Pergament roh ignorieren, wir zählen nur die verwandelte Form
             if(key === 'pergament') return;
             
             const item = findItems[key];
@@ -527,7 +535,6 @@
 
     fields.forEach(field => {
         field.addEventListener('click', (e) => {
-            // Das X wird sofort und zuverlässig in der Feldmitte erzeugt
             const xMark = document.createElement('div');
             xMark.className = 'tap-x'; xMark.innerText = 'X';
             
@@ -542,7 +549,6 @@
             
             setTimeout(() => xMark.remove(), 500);
 
-            // Bewegung nur ausführen, wenn er bereit ist
             if (isMoving || isDigging || showingResult || dugFields.size >= 3 || schnabel.dataset.sprite === 'kritzelnd' || schnabel.dataset.sprite === 'haltend') return;
 
             const tX = parseInt(field.dataset.x);
