@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Buddel rum! (v0.40 - Fixes)</title>
+    <title>Buddel rum! (v0.41)</title>
     <style>
         /* Deaktiviert den blauen Klick-Schein auf mobilen Geräten */
         * { -webkit-tap-highlight-color: transparent; }
@@ -166,7 +166,7 @@
 
         /* Anleitung Overlay Panel */
         #instructions-layer {
-            z-index: 9500; /* FIX: Zwingt die Anleitung ÜBER den Startbildschirm (9000) */
+            z-index: 9500; 
         }
         #instructions-panel {
             text-align: left; 
@@ -382,7 +382,9 @@
         const coords = getPixelCoordsFromGrid(1, 0.5);
         updateSchnabelVisuals(coords.x, coords.y);
         updateButtonState();
-        stopAllTimers();
+        
+        // Schnabel faengt auch am Startpunkt nach 3 Sek an zu rauchen
+        startIdleTimer();
     }
 
     function getPixelCoordsFromGrid(gX, gY) {
@@ -405,7 +407,8 @@
 
     function startIdleTimer() {
         stopAllTimers();
-        if (currentGridPos.y === 0.5 || showingResult || schnabel.dataset.sprite === 'kritzelnd' || schnabel.dataset.sprite === 'haltend') return;
+        // Keine Idle-Sperre mehr fuer y=0.5 -> Schnabel raucht jetzt auch am Start!
+        if (showingResult || schnabel.dataset.sprite === 'kritzelnd' || schnabel.dataset.sprite === 'haltend') return;
         
         idleTimer = setTimeout(() => {
             let step = 1;
