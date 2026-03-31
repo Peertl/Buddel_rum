@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Buddel rum! (v0.24)</title>
+    <title>Buddel rum! (v0.25 - Expedition Start)</title>
     <style>
         body, html {
             margin: 0;
@@ -118,15 +118,36 @@
             transform: translate(var(--shift-x), var(--shift-y)) scale(var(--scale-correction)); 
             transform-origin: bottom center;
             display: block;
-            /* TRANSITION ENTFERNT: Jetzt gibt es harte, knackige Posen-Wechsel */
         }
 
-        /* * --- CSS-PERFEKTIONS-KORREKTUREN --- * */
-        
-        /* Stehen */
-        #schnabel[data-sprite="stehend"] { --shift-x: -50%; --scale-correction: 1; }
+        /* Speech Bubble */
+        #schnabel-speech {
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: white;
+            border: 4px solid #5a3d17;
+            border-radius: 15px;
+            padding: 10px 15px;
+            width: max-content;
+            max-width: 250px;
+            z-index: 25;
+            display: none;
+        }
+        #schnabel-speech:after {
+            content: '';
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            margin-left: -10px;
+            border-width: 10px;
+            border-style: solid;
+            border-color: #5a3d17 transparent transparent transparent;
+        }
 
-        /* Rauchen */
+        /* CSS-PERFEKTIONS-KORREKTUREN */
+        #schnabel[data-sprite="stehend"] { --shift-x: -50%; --scale-correction: 1; }
         #schnabel[data-sprite="rauchend_1"] { 
             --shift-x: -50%; 
             --shift-y: 2%; 
@@ -137,25 +158,113 @@
             --shift-y: 2%; 
             --scale-correction: 1.05; 
         }
-
-        /* Laufen Vorwärts & Seitwärts */
         #schnabel[data-sprite="laufend_links_1"] { --shift-x: -50%; --scale-correction: 1; }
         #schnabel[data-sprite="laufend_links_2"] { --shift-x: -50%; --scale-correction: 1; }
         #schnabel[data-sprite="laufend_rechts_1"] { --shift-x: -50%; --scale-correction: 1; }
         #schnabel[data-sprite="laufend_rechts_2"] { --shift-x: -50%; --scale-correction: 1; }
-
-        /* Laufen Zurück */
         #schnabel[data-sprite="laufend_zurück_links_1"] { --shift-x: -50%; --scale-correction: 0.96; }
         #schnabel[data-sprite="laufend_zurück_links_2"] { --shift-x: -50%; --scale-correction: 0.96; }
         #schnabel[data-sprite="laufend_zurück_rechts_1"] { --shift-x: -50%; --scale-correction: 0.96; }
         #schnabel[data-sprite="laufend_zurück_rechts_2"] { --shift-x: -50%; --scale-correction: 0.96; }
-
-        /* Buddeln & Hurra (Sitzend) */
         #schnabel[data-sprite="buddelnd_1"] { --shift-x: -50%; --scale-correction: 0.80; }
         #schnabel[data-sprite="buddelnd_2"] { --shift-x: -50%; --scale-correction: 0.80; }
         #schnabel[data-sprite="hurra"] { --shift-x: -50%; --scale-correction: 0.80; }
 
-        /* --- UI Elemente --- */
+        /* Find Layers & Summary Screen */
+        .overlay-layer {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.7);
+            z-index: 100;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            color: #5a3d17;
+            text-align: center;
+        }
+
+        #result-display {
+            background-color: #d4a351;
+            border: 8px solid #8b5a2b;
+            border-radius: 20px;
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+        }
+
+        .found-img {
+            width: 150px;
+            margin-bottom: 20px;
+        }
+
+        .run-btn {
+            font-family: 'Comic Sans MS', sans-serif;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #fff;
+            background-color: #8b5a2b;
+            border: 4px solid #5a3d17;
+            border-radius: 15px;
+            padding: 10px 40px;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            text-shadow: 2px 2px 0px #5a3d17;
+            margin-top: 20px;
+            display: none;
+        }
+
+        #summary-display {
+            background-color: #d4a351;
+            border: 8px solid #8b5a2b;
+            border-radius: 20px;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            max-width: 90%;
+            max-height: 90%;
+            overflow-y: auto;
+        }
+
+        #summary-layer h2 { margin-top: 0; text-decoration: underline; }
+        #finds-list {
+            margin: 20px 0;
+            font-size: 1.2rem;
+            width: 100%;
+            text-align: left;
+        }
+        #finds-list li { margin-bottom: 5px; }
+        #money-roll-summary {
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            margin: 20px 0;
+        }
+        #total-money-icon {
+            width: 60px;
+            margin-right: 15px;
+        }
+        #restart-expedition-btn {
+            margin-top: 30px;
+        }
+
+        /* Währung Icons im Summary */
+        .money-roll-icon-summary {
+            width: 30px;
+            margin: 5px;
+        }
+
+        /* Niete Icon im Summary */
+        .niete-icon-summary {
+            width: 30px;
+            margin: 5px;
+        }
+
+        /* UI elements */
         #ui-layer {
             position: absolute;
             bottom: 20px;
@@ -178,7 +287,7 @@
             cursor: pointer;
             box-shadow: 0 4px 6px rgba(0,0,0,0.3);
             text-shadow: 2px 2px 0px #5a3d17;
-            transition: transform 0.1s ease;
+            transition: all 0.2s ease;
         }
 
         #btn-buddeln:active:not(:disabled) {
@@ -222,6 +331,7 @@
     </div>
 
     <div id="schnabel" data-sprite="stehend">
+        <div id="schnabel-speech">bubble</div>
         <div id="schnabel-scale-wrapper">
             <img id="schnabel-img" src="Schnabel_stehend.png" alt="Schnabel">
         </div>
@@ -229,6 +339,30 @@
 
     <div id="ui-layer">
         <button id="btn-buddeln" disabled>Buddeln</button>
+    </div>
+
+    <div id="result-layer" class="overlay-layer">
+        <div id="result-display">
+            <img id="found-item-img" class="found-img" src="Niete.png" alt="Fundstück">
+            <p id="found-item-text">Text hier...</p>
+            <button id="run-find-btn" class="run-btn">un!</button>
+        </div>
+    </div>
+
+    <div id="summary-layer" class="overlay-layer">
+        <div id="summary-display">
+            <h2>Expedition beendet!</h2>
+            <p>Deine Funde:</p>
+            <ul id="finds-list">
+                </ul>
+            <div id="money-roll-summary">
+                <img id="total-money-icon" src="Währung.png" alt="Rolle Geld">
+                <p>Verdientes Geld: <span id="total-money-count">0</span> Rollen</p>
+            </div>
+            <div id="money-rolls-visual">
+                </div>
+            <button id="restart-expedition-btn" class="run-btn run-confirm">Neue Expedition starten</button>
+        </div>
     </div>
 </div>
 
@@ -241,9 +375,52 @@
         'Schnabel_laufend_zurück_rechts_1.png', 'Schnabel_laufend_zurück_rechts_2.png',
         'Schnabel_rauchend_1.png', 'Schnabel_rauchend_2.png',
         'Buddel-Bursche_buddelnd-1.png', 'Buddel-Bursche_buddelnd-2.png',
-        'Buddel-Bursche-Hurra.png', 'Loch.png'
+        'Buddel-Bursche-Hurra.png', 'Loch.png',
+        'Währung.png', 'Kanope_Anubis_Stil-1.png', 'Niete.png'
     ];
     let loadedImages = 0;
+
+    const findItems = [
+        { key: 'niete', img: 'Niete.png', text: '' },
+        { key: 'kanope', img: 'Kanope_Anubis_Stil-1.png', text: 'Die wird mir eine schöne Rolle Geld einbringen' }
+    ];
+
+    const fields = document.querySelectorAll('.field');
+    const schnabel = document.getElementById('schnabel'); 
+    const schnabelScaleWrapper = document.getElementById('schnabel-scale-wrapper'); 
+    const schnabelImg = document.getElementById('schnabel-img');
+    const gridEl = document.getElementById('grid');
+    const btnBuddeln = document.getElementById('btn-buddeln');
+    const schnabelSpeech = document.getElementById('schnabel-speech');
+    
+    // Result Layer elements
+    const resultLayer = document.getElementById('result-layer');
+    const foundItemImg = document.getElementById('found-item-img');
+    const foundItemText = document.getElementById('found-item-text');
+    const runFindBtn = document.getElementById('run-find-btn');
+    
+    // Summary Layer elements
+    const summaryLayer = document.getElementById('summary-layer');
+    const findsList = document.getElementById('finds-list');
+    const totalMoneyCount = document.getElementById('total-money-count');
+    const moneyRollsVisual = document.getElementById('money-rolls-visual');
+    const restartBtn = document.getElementById('restart-expedition-btn');
+
+    let isMoving = false;
+    let isDigging = false; 
+    let showingResult = false;
+    let walkStep = 1;
+    let walkInterval = null;
+    let currentDirection = null; 
+    
+    let currentGridPos = { x: 1, y: 0.5 }; 
+    let dugFields = new Set(); 
+    let inventory = [];
+
+    let idleTimer = null;
+    let smokeInterval = null;
+    let digActionInterval = null;
+    let speechTimer = null;
 
     function imageLoaded() {
         loadedImages++;
@@ -260,41 +437,63 @@
         img.src = src;
     });
 
-    const fields = document.querySelectorAll('.field');
-    const schnabel = document.getElementById('schnabel'); 
-    const schnabelScaleWrapper = document.getElementById('schnabel-scale-wrapper'); 
-    const schnabelImg = document.getElementById('schnabel-img');
-    const gridEl = document.getElementById('grid');
-    const btnBuddeln = document.getElementById('btn-buddeln');
-    
-    let isMoving = false;
-    let isDigging = false; 
-    let walkStep = 1;
-    let walkInterval = null;
-    let currentDirection = null; 
-    
-    let currentGridPos = { x: 1, y: 0.5 }; 
-    let dugFields = new Set(); 
-
-    let idleTimer = null;
-    let smokeInterval = null;
-    let digActionInterval = null;
-
     function setSchnabelImage(filename, spriteState) {
         schnabelImg.src = filename;
         schnabel.dataset.sprite = spriteState;
     }
 
+    function schnabelTalk(text, duration) {
+        if(speechTimer) clearTimeout(speechTimer);
+        schnabelSpeech.innerText = text;
+        schnabelSpeech.style.display = 'block';
+        if(text === '') schnabelSpeech.style.display = 'none';
+        
+        if (duration) {
+            speechTimer = setTimeout(() => {
+                schnabelSpeech.style.display = 'none';
+            }, duration);
+        }
+    }
+
+    function resetCharacter() {
+        stopAllTimers();
+        schnabelTalk('', 0);
+        setSchnabelImage('Schnabel_stehend.png', 'stehend');
+        isMoving = false;
+        isDigging = false;
+        showingResult = false;
+        walkStep = 1;
+        currentDirection = null;
+        walkInterval = null;
+        currentGridPos = { x: 1, y: 0.5 };
+        dugFields.clear();
+        inventory = [];
+        
+        // Clear all Loch.png images
+        const lochImages = document.querySelectorAll('.loch-img');
+        lochImages.forEach(img => img.remove());
+        
+        const startCoords = getPixelCoordsFromGrid(currentGridPos.x, currentGridPos.y);
+        updateSchnabelVisuals(startCoords.x, startCoords.y);
+        updateButtonState();
+    }
+
+    function resetGame() {
+        resultLayer.style.display = 'none';
+        summaryLayer.style.display = 'none';
+        runFindBtn.style.display = 'none';
+        restartBtn.style.display = 'none';
+        btnBuddeln.style.display = 'block';
+        resetCharacter();
+    }
+
     function initGame() {
         document.getElementById('loading-screen').style.display = 'none';
         document.getElementById('game-container').style.display = 'block';
-        
-        setTimeout(() => {
-            const startCoords = getPixelCoordsFromGrid(currentGridPos.x, currentGridPos.y);
-            updateSchnabelVisuals(startCoords.x, startCoords.y);
-            setSchnabelImage('Schnabel_stehend.png', 'stehend');
-            updateButtonState();
-        }, 50);
+        btnBuddeln.disabled = true; // Disabled initially
+        runFindBtn.style.display = 'none'; // Ensure its hidden
+
+        resetGame(); // Ensure clean start
     }
 
     function getPixelCoordsFromGrid(gX, gY) {
@@ -331,7 +530,7 @@
 
     function startIdleTimer() {
         stopAllTimers();
-        if (currentGridPos.y === 0.5) return; 
+        if (currentGridPos.y === 0.5 || showingResult) return; 
 
         idleTimer = setTimeout(() => {
             startSmoking();
@@ -350,7 +549,7 @@
 
     function updateButtonState() {
         const fieldKey = `${currentGridPos.x}-${currentGridPos.y}`;
-        if (!isMoving && !isDigging && currentGridPos.y !== 0.5 && !dugFields.has(fieldKey)) {
+        if (!isMoving && !isDigging && !showingResult && currentGridPos.y !== 0.5 && !dugFields.has(fieldKey)) {
             btnBuddeln.disabled = false;
         } else {
             btnBuddeln.disabled = true;
@@ -386,26 +585,94 @@
         dugFields.add(fieldKey); 
         
         const fieldEl = document.querySelector(`.field[data-x="${currentGridPos.x}"][data-y="${currentGridPos.y}"]`);
-        
         const pxCoords = getPixelCoordsFromGrid(currentGridPos.x, currentGridPos.y);
         const currentScale = updateSchnabelVisuals(pxCoords.x, pxCoords.y);
 
         const lochImg = document.createElement('img');
         lochImg.src = 'Loch.png';
         lochImg.className = 'loch-img';
-        
         lochImg.style.transform = `translateX(-50%) scaleX(-${currentScale}) scaleY(${currentScale})`;
         fieldEl.appendChild(lochImg);
 
+        // Transition to Hurra pose, but don't reset.
         setSchnabelImage('Buddel-Bursche-Hurra.png', 'hurra');
+        showingResult = true;
+        updateButtonState();
 
-        setTimeout(() => {
-            setSchnabelImage('Schnabel_stehend.png', 'stehend');
-            isDigging = false;
-            updateButtonState();
-            startIdleTimer(); 
-        }, 3000);
+        // Roll result
+        const findIndex = Math.floor(Math.random() * findItems.length);
+        const find = findItems[findIndex];
+        inventory.push(find.key);
+
+        foundItemImg.src = find.img;
+        foundItemText.innerText = find.text;
+        runFindBtn.style.display = 'block'; // Show confirmation btn
+        
+        // Character speech bubble
+        if(find.text !== '') {
+            schnabelTalk(find.text); // User requested specific phrase for Kanope
+        }
+
+        resultLayer.style.display = 'flex'; // Show result overlay
     }
+
+    function showFinalSummary() {
+        resultLayer.style.display = 'none'; // Hide result screen
+        showingResult = false;
+        
+        // Hide game-layer UI elements
+        btnBuddeln.style.display = 'none';
+        restartBtn.style.display = 'block';
+
+        findsList.innerHTML = ''; // Clear list
+        moneyRollsVisual.innerHTML = ''; // Clear money rolls
+        
+        let moneyRollsCount = 0;
+        inventory.forEach((itemKey, index) => {
+            const item = findItems.find(f => f.key === itemKey);
+            const li = document.createElement('li');
+            li.innerHTML = `Fund ${index + 1}: <img src="${item.img}" class="${itemKey}-icon-summary" /> ${itemKey === 'niete' ? 'Niete' : 'Kanope'}`;
+            findsList.appendChild(li);
+            
+            if(itemKey === 'kanope') {
+                moneyRollsCount++;
+            }
+        });
+
+        totalMoneyCount.innerText = moneyRollsCount;
+        
+        // Create money roll icons
+        for(let i = 0; i < moneyRollsCount; i++) {
+            const img = document.createElement('img');
+            img.src = 'Währung.png';
+            img.className = 'money-roll-icon-summary';
+            moneyRollsVisual.appendChild(img);
+        }
+
+        summaryLayer.style.display = 'flex'; // Show summary overlay
+    }
+
+    // Confirmation "un!" button inside result layer
+    runFindBtn.addEventListener('click', () => {
+        resultLayer.style.display = 'none';
+        showingResult = false;
+        updateButtonState();
+        schnabelTalk('', 0); // Hide speech
+
+        if (dugFields.size === 3) {
+            // Game end, show summary
+            showFinalSummary();
+        } else {
+            // Stand back up and start idle timer
+            setSchnabelImage('Schnabel_stehend.png', 'stehend');
+            startIdleTimer();
+        }
+    });
+
+    // Final screen restart button
+    restartBtn.addEventListener('click', () => {
+        resetGame();
+    });
 
     function startWalkAnimation(fromX, fromY, toX, toY) {
         clearInterval(walkInterval);
@@ -491,7 +758,7 @@
 
     fields.forEach(field => {
         field.addEventListener('click', (e) => {
-            if (isMoving || isDigging) return;
+            if (isMoving || isDigging || showingResult || dugFields.size === 3) return;
 
             const tX = parseInt(e.target.dataset.x);
             const tY = parseInt(e.target.dataset.y);
