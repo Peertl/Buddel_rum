@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Buddel rum! (v0.39 - Start Update)</title>
+    <title>Buddel rum! (v0.40 - Fixes)</title>
     <style>
         /* Deaktiviert den blauen Klick-Schein auf mobilen Geräten */
         * { -webkit-tap-highlight-color: transparent; }
@@ -14,7 +14,7 @@
             background-color: #e5b85c; 
         }
         
-        /* Loading Screen (Unverändert) */
+        /* Loading Screen */
         #loading-screen {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background-color: #e5b85c; display: flex; flex-direction: column;
@@ -29,31 +29,30 @@
 
         #progress-bar { width: 0%; height: 100%; background-color: #8b5a2b; transition: width 0.3s ease; }
 
-        /* NEU: Altägyptischer Startbildschirm */
+        /* Altägyptischer Startbildschirm */
         #start-screen {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            /* Sandfarbener Hintergrund mit leichtem Hieroglyphen-Muster (thematisch) */
             background: radial-gradient(circle, #e6c88f, #e5b85c);
             background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" opacity="0.1"><text x="10" y="30" font-size="20">𓁀</text><text x="50" y="70" font-size="20">𓆣</text><text x="80" y="20" font-size="20">𓀠</text></svg>');
-            display: none; /* Erst nach Loading sichtbar */
+            display: none; 
             flex-direction: column; justify-content: center; align-items: center;
             z-index: 9000; text-align: center;
         }
         
         #start-logo {
-            max-width: 80%; /* Logo nimmt 80% der Breite ein */
+            max-width: 80%; 
             height: auto;
-            margin-bottom: 50px; /* Abstand zu den Buttons */
+            margin-bottom: 50px; 
         }
         
         .start-btn-container { display: flex; flex-direction: column; gap: 20px; }
 
-        /* Spielfeld (Hidden by default, bis Start gedrückt wird) */
+        /* Spielfeld */
         #game-container {
             position: relative; width: 100vw; height: 100dvh; max-width: 600px;
             margin: 0 auto; background-image: url('Hintergrund.png');
             background-size: cover; background-position: center 80%; 
-            overflow: hidden; display: none; /* Hidden on Start */
+            overflow: hidden; display: none; 
         }
 
         #grid {
@@ -95,7 +94,7 @@
             transform-origin: bottom center; display: block;
         }
 
-        /* Sprite Poses (v0.38 kompatibel) */
+        /* Sprite Poses */
         #schnabel[data-sprite="stehend"] { --shift-x: -50%; --scale-correction: 1; }
         #schnabel[data-sprite="rauchend_1"] { --shift-x: -50%; --shift-y: 2%; --scale-correction: 1.05; }
         #schnabel[data-sprite="rauchend_2"] { --shift-x: -50.5%; --shift-y: 2%; --scale-correction: 1.05; }
@@ -112,7 +111,7 @@
             flex-direction: column; color: #5a3d17; text-align: center;
         }
 
-        /* NEU: Gemeinsame Klasse für alle Fund/Summary Panels */
+        /* Gemeinsame Klasse für alle Fund/Summary Panels */
         .overlay-panel {
             background-color: #d4a351; border: 8px solid #8b5a2b;
             border-radius: 20px; padding: 30px 20px; display: flex;
@@ -165,10 +164,13 @@
         }
         #btn-buddeln:disabled { background-color: #b09a83; color: #e0d6cb; cursor: not-allowed; }
 
-        /* NEU: Anleitung Overlay Panel */
+        /* Anleitung Overlay Panel */
+        #instructions-layer {
+            z-index: 9500; /* FIX: Zwingt die Anleitung ÜBER den Startbildschirm (9000) */
+        }
         #instructions-panel {
-            text-align: left; /* Text linksbündig */
-            justify-content: space-around; /* Elemente verteilen */
+            text-align: left; 
+            justify-content: space-around; 
         }
         
         #instructions-title { font-size: 2.2rem; font-weight: bold; margin-bottom: 20px; text-decoration: underline; color: #5a3d17;}
@@ -179,7 +181,6 @@
         #instructions-list li {
             margin-bottom: 15px; position: relative; padding-left: 25px; line-height: 1.4;
         }
-        /* Kleines ägyptisches Symbol vor den Listenpunkten */
         #instructions-list li::before {
             content: '𓂀'; position: absolute; left: 0; top: 0; color: #8b5a2b; font-size: 1rem;
         }
@@ -189,7 +190,7 @@
 <body>
 
 <div id="loading-screen">
-    <h1>Expedition startet...</h1>
+    <h1>Lade Schätze...</h1>
     <div class="progress-bar-container"><div id="progress-bar"></div></div>
 </div>
 
@@ -272,11 +273,10 @@
         'Buddel-Bursche_kritzelnd.png', 'Buddel-Bursche_Penoi.png', 'Pergament_Penoi.png', 'Pergament.png',
         'Kanope_C3PO_Stil-2.png', 'Kanope_Dino_Stil-2.png', 'No_Fritteuse.png', 'Relief_Ailiens_Dino.png', 'Rosetta_un.png',
         'Relief_Herbertep.png', 'Kanope_Herbertep_Stil-2.png', 'Herbertep.png', 'Dinosaurier.png',
-        'Buddel-Rum-Logo.png' // NEU: Logo laden
+        'Buddel-Rum-Logo.png' 
     ];
     let loadedImages = 0;
     
-    // Item-Datenbank (Unverändert)
     const findItems = {
         'niete': { img: 'Niete.png', text: '', value: 0 },
         'kanope': { img: 'Kanope_Anubis_Stil-1.png', text: '"Die wird mir eine schöne Rolle Geld einbringen!"', value: 1 },
@@ -301,11 +301,9 @@
     const gameContainer = document.getElementById('game-container');
     const btnBuddeln = document.getElementById('btn-buddeln');
     
-    // Start Screen & Anleitung Elements
     const startScreen = document.getElementById('start-screen');
     const instructionsLayer = document.getElementById('instructions-layer');
 
-    // Layers & Panels (Refactored to classes)
     const resultLayer = document.getElementById('result-layer');
     const foundItemImg = document.getElementById('found-item-img');
     const foundQuote = document.getElementById('found-quote');
@@ -323,7 +321,6 @@
     
     let latestDugLochElement = null; 
 
-    // Preloader Callback
     function imageLoaded() {
         loadedImages++;
         document.getElementById('progress-bar').style.width = (loadedImages / imagesToLoad.length * 100) + '%';
@@ -336,36 +333,32 @@
         schnabel.dataset.sprite = spriteState;
     }
 
-    // NEU: Initialisiert den Start-Screen nach dem Laden
     function initStartScreen() {
         document.getElementById('loading-screen').style.display = 'none';
-        startScreen.style.display = 'flex'; // Startbildschirm anzeigen
+        startScreen.style.display = 'flex'; 
     }
 
-    // Event Listeners für Start Screen
     document.getElementById('start-expedition-btn').addEventListener('click', startExpedition);
     document.getElementById('start-anleitung-btn').addEventListener('click', showInstructions);
     document.getElementById('confirm-instructions-btn').addEventListener('click', hideInstructions);
 
     function startExpedition() {
-        startScreen.style.display = 'none'; // Startbildschirm ausblenden
-        gameContainer.style.display = 'block'; // Spielfeld einblenden
-        resetGame(); // Expedition starten
+        startScreen.style.display = 'none'; 
+        gameContainer.style.display = 'block'; 
+        resetGame(); 
     }
 
     function showInstructions() {
-        instructionsLayer.style.display = 'flex'; // Anleitung einblenden
+        instructionsLayer.style.display = 'flex'; 
     }
 
     function hideInstructions() {
-        instructionsLayer.style.display = 'none'; // Anleitung ausblenden
+        instructionsLayer.style.display = 'none'; 
     }
 
-    // Spiel-Logik (Unverändert, nur resetGame() wird von startExpedition() aufgerufen)
     function resetGame() {
-        // Overlay Layers schließen (aber nicht den Start Screen)
         document.querySelectorAll('.overlay-layer').forEach(l => l.style.display = 'none');
-        startScreen.style.display = 'none'; // Wichtig, falls Restart gedrückt wird
+        startScreen.style.display = 'none'; 
         btnBuddeln.style.display = 'block';
         inventory = [];
         dugFields.clear();
@@ -392,7 +385,6 @@
         stopAllTimers();
     }
 
-    // Core Game Mechanics (v0.38 - Unverändert)
     function getPixelCoordsFromGrid(gX, gY) {
         const rect = gridEl.getBoundingClientRect(), container = gameContainer.getBoundingClientRect();
         return {
@@ -453,7 +445,6 @@
         loch.className = 'loch-img latest-dug';
         latestDugLochElement = loch;
         
-        // Dynamische Perspektive für das Loch
         const bottomPos = 50 - (28 * currentScale);
         loch.style.bottom = bottomPos + '%';
         loch.style.transform = `translateX(-50%) scale(${currentScale})`; 
@@ -466,8 +457,8 @@
         const item = findItems[itemKey];
         inventory.push(itemKey);
 
-        foundItemImg.src = item.img;
-        foundQuote.innerText = item.text;
+        document.getElementById('found-item-img').src = item.img;
+        document.getElementById('found-quote').innerText = item.text;
         confirmFindBtn.innerText = item.buttonText || "un!"; 
         
         setTimeout(() => {
@@ -489,8 +480,8 @@
                     showingResult = true; 
                     confirmFindBtn.innerText = "un!"; 
                     
-                    foundItemImg.src = findItems['pergament-penoi'].img;
-                    foundQuote.innerText = findItems['pergament-penoi'].text;
+                    document.getElementById('found-item-img').src = findItems['pergament-penoi'].img;
+                    document.getElementById('found-quote').innerText = findItems['pergament-penoi'].text;
                     resultLayer.style.display = 'flex';
                     
                     inventory.push('pergament-penoi');
@@ -535,7 +526,6 @@
 
     restartBtn.addEventListener('click', resetGame);
 
-    // Movement mechanics (v0.38 - Unverändert)
     function startWalkAnimation(fromX, fromY, toX, toY) {
         clearInterval(walkInterval);
         
@@ -598,7 +588,7 @@
 
     fields.forEach(field => {
         field.addEventListener('click', (e) => {
-            if (gameContainer.style.display !== 'block') return; // Klicken nur erlauben, wenn das Spielfeld aktiv ist
+            if (gameContainer.style.display !== 'block') return;
 
             const xMark = document.createElement('div');
             xMark.className = 'tap-x'; xMark.innerText = 'X';
