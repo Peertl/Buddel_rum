@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Buddel rum! (v0.31)</title>
+    <title>Buddel rum! (v0.32 - Schatz-Update)</title>
     <style>
         /* Deaktiviert den blauen Klick-Schein auf mobilen Geräten */
         * { -webkit-tap-highlight-color: transparent; }
@@ -226,20 +226,26 @@
         'Schnabel_laufend_rechts_1.png', 'Schnabel_laufend_rechts_2.png', 'Schnabel_laufend_zurück_links_1.png',
         'Schnabel_laufend_zurück_links_2.png', 'Schnabel_laufend_zurück_rechts_1.png', 'Schnabel_laufend_zurück_rechts_2.png',
         'Schnabel_rauchend_1.png', 'Schnabel_rauchend_2.png', 'Buddel-Bursche_buddelnd-1.png', 'Buddel-Bursche_buddelnd-2.png',
-        'Buddel-Bursche-Hurra.png', 'Loch.png', 'Währung.png', 'Kanope_Anubis_Stil-1.png', 'Niete.png',
-        'Buddel-Bursche_kritzelnd.png', 'Buddel-Bursche_Penoi.png', 'Pergament_Penoi.png', 'Pergament.png' // Deine neuen Original-Dateinamen!
+        'Buddel-Bursche-Hurra.png', 'Loch_neu.png', 'Währung.png', 'Kanope_Anubis_Stil-1.png', 'Niete.png',
+        'Buddel-Bursche_kritzelnd.png', 'Buddel-Bursche_Penoi.png', 'Pergament_Penoi.png', 'Pergament.png',
+        'Kanope_C3PO_Stil-2.png', 'Kanope_Dino_Stil-2.png', 'No_Fritteuse.png', 'Relief_Ailiens_Dino.png', 'Rosetta_un.png'
     ];
     let loadedImages = 0;
     
-    // Item-Datenbank (inklusive deiner neuen Original-Dateinamen)
+    // Item-Datenbank (inklusive aller neuen Schätze & Niete & Pergament-Prozess)
     const findItems = {
         'niete': { img: 'Niete.png', text: '', value: 0 },
-        'kanope': { img: 'Kanope_Anubis_Stil-1.png', text: '"Die wird mir eine schöne Rolle Geld einbringen!"', value: 1 },
+        'kanope': { img: 'Kanope_Anubis_Stil-1.png', text: '"Die wird mir eine schöne Rolle Geld einbringen"', value: 1 },
         'pergament': { img: 'Pergament.png', text: '"Molto! Aber so bekomme ich dafür ja höchstens eine Rolle"', value: 0, buttonText: "Aufwerten" },
-        'pergament-penoi': { img: 'Pergament_Penoi.png', text: '"Besser!"', value: 3, buttonText: "un!" }
+        'pergament-penoi': { img: 'Pergament_Penoi.png', text: '"Besser!"', value: 3, buttonText: "un!" },
+        // Neue Schätze v0.32
+        'kanope_c3po': { img: 'Kanope_C3PO_Stil-2.png', text: '"Das ist mir neu..."', value: 2 },
+        'kanope_dino': { img: 'Kanope_Dino_Stil-2.png', text: '"Das ist mir neu..."', value: 2 },
+        'relief_aliens': { img: 'Relief_Ailiens_Dino.png', text: '"Ich wusste es!"', value: 5 },
+        'no_fritteuse': { img: 'No_Fritteuse.png', text: '"Wieder nur Werbung"', value: 4 },
+        'rosetta': { img: 'Rosetta_un.png', text: '"Pupel-Sprache ist also nicht nur edel, sondern auch schon sehr alt"', value: 6 }
     };
 
-    // DOM Elemente (Die fehlende "fields" Zeile ist repariert!)
     const fields = document.querySelectorAll('.field');
     const schnabel = document.getElementById('schnabel');
     const schnabelImg = document.getElementById('schnabel-img');
@@ -293,19 +299,21 @@
         document.querySelectorAll('.loch-img').forEach(img => img.remove());
         latestDugLochElement = null;
         
-        // Loot verteilen: 1 Pergament, 4 Nieten, 7 Kanopen
-        gameItems = ['pergament'].concat(Array(4).fill('niete')).concat(Array(7).fill('kanope'));
-        gameItems.sort(() => Math.random() - 0.5); 
+        // Loot verteilen: 12 Felder -> Mix aus Niete, Pergament und den 7 Schätzen
+        // Strategie: 4 Nieten, 1 Pergament (wichtig), und die anderen 7 Slots aus den Schätzen auffüllen (Zufällig gemischt)
+        let specialItems = ['niete','niete','niete','niete','pergament','kanope','kanope','kanope_c3po','kanope_dino','relief_aliens','no_fritteuse','rosetta'];
+        
+        // Zufällig mischen
+        gameItems = specialItems.sort(() => Math.random() - 0.5); 
         
         currentGridPos = { x: 1, y: 0.5 };
         isDigging = false; isMoving = false; showingResult = false;
-        
         setSchnabelImage('Schnabel_stehend.png', 'stehend');
-        stopAllTimers();
         
         const coords = getPixelCoordsFromGrid(1, 0.5);
         updateSchnabelVisuals(coords.x, coords.y);
         updateButtonState();
+        stopAllTimers();
     }
 
     function getPixelCoordsFromGrid(gX, gY) {
@@ -364,13 +372,14 @@
         const coords = getPixelCoordsFromGrid(currentGridPos.x, currentGridPos.y);
         const currentScale = updateSchnabelVisuals(coords.x, coords.y);
         
-        // Loch rendern und als neuestes (vorne liegend) markieren
+        // Loch rendern (Verwende neues Loch, NICHT gespiegelt)
         const loch = document.createElement('img');
-        loch.src = 'Loch.png'; 
+        loch.src = 'Loch_neu.png'; 
         loch.className = 'loch-img latest-dug';
         latestDugLochElement = loch;
         
-        loch.style.transform = `translateX(-50%) scaleX(-${currentScale}) scaleY(${currentScale})`;
+        // WICHTIG: scaleX(-1) ENTFERNT, nur mathematische Skalierung beibehalten
+        loch.style.transform = `translateX(-50%) scale(${currentScale})`; 
         fieldEl.appendChild(loch);
 
         setSchnabelImage('Buddel-Bursche-Hurra.png', 'hurra');
@@ -378,10 +387,11 @@
 
         const itemKey = gameItems[parseInt(fieldEl.dataset.index) - 1];
         const item = findItems[itemKey];
+        // Das Pergament zählt nicht mit in die Rollen-Summe, Pergament-Penoi zählt.
         inventory.push(itemKey);
 
-        foundItemImg.src = item.img;
-        foundQuote.innerText = item.text;
+        document.getElementById('found-item-img').src = item.img;
+        document.getElementById('found-quote').innerText = item.text;
         confirmFindBtn.innerText = item.buttonText || "un!"; 
         
         // 1 Sekunde Verzögerung für die Hurra-Animation!
@@ -405,8 +415,8 @@
                     showingResult = true; 
                     confirmFindBtn.innerText = "un!"; 
                     
-                    foundItemImg.src = findItems['pergament-penoi'].img;
-                    foundQuote.innerText = findItems['pergament-penoi'].text;
+                    document.getElementById('found-item-img').src = findItems['pergament-penoi'].img;
+                    document.getElementById('found-quote').innerText = findItems['pergament-penoi'].text;
                     resultLayer.style.display = 'flex';
                     
                     inventory.push('pergament-penoi');
@@ -432,7 +442,8 @@
     });
 
     function showSummary() {
-        findsList.innerHTML = '';
+        const list = document.getElementById('finds-list');
+        list.innerHTML = '';
         let total = 0;
         
         inventory.forEach(key => {
