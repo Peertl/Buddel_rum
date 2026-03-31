@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Buddel rum! (v0.38)</title>
+    <title>Buddel rum! (v0.39 - Start Update)</title>
     <style>
         /* Deaktiviert den blauen Klick-Schein auf mobilen Geräten */
         * { -webkit-tap-highlight-color: transparent; }
@@ -14,10 +14,11 @@
             background-color: #e5b85c; 
         }
         
+        /* Loading Screen (Unverändert) */
         #loading-screen {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background-color: #e5b85c; display: flex; flex-direction: column;
-            justify-content: center; align-items: center; z-index: 9999; color: #5a3d17;
+            justify-content: center; align-items: center; z-index: 10000; color: #5a3d17;
         }
 
         .progress-bar-container {
@@ -28,11 +29,31 @@
 
         #progress-bar { width: 0%; height: 100%; background-color: #8b5a2b; transition: width 0.3s ease; }
 
+        /* NEU: Altägyptischer Startbildschirm */
+        #start-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            /* Sandfarbener Hintergrund mit leichtem Hieroglyphen-Muster (thematisch) */
+            background: radial-gradient(circle, #e6c88f, #e5b85c);
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" opacity="0.1"><text x="10" y="30" font-size="20">𓁀</text><text x="50" y="70" font-size="20">𓆣</text><text x="80" y="20" font-size="20">𓀠</text></svg>');
+            display: none; /* Erst nach Loading sichtbar */
+            flex-direction: column; justify-content: center; align-items: center;
+            z-index: 9000; text-align: center;
+        }
+        
+        #start-logo {
+            max-width: 80%; /* Logo nimmt 80% der Breite ein */
+            height: auto;
+            margin-bottom: 50px; /* Abstand zu den Buttons */
+        }
+        
+        .start-btn-container { display: flex; flex-direction: column; gap: 20px; }
+
+        /* Spielfeld (Hidden by default, bis Start gedrückt wird) */
         #game-container {
             position: relative; width: 100vw; height: 100dvh; max-width: 600px;
             margin: 0 auto; background-image: url('Hintergrund.png');
             background-size: cover; background-position: center 80%; 
-            overflow: hidden; display: none; 
+            overflow: hidden; display: none; /* Hidden on Start */
         }
 
         #grid {
@@ -60,16 +81,11 @@
 
         /* EBENEN-LOGIK & POSITION DES LOCHS */
         .loch-img {
-            position: absolute; 
-            left: 45%;   
-            width: 90px; 
-            transform-origin: bottom center;
-            pointer-events: none; 
-            z-index: 15; 
+            position: absolute; left: 45%;   
+            width: 90px; transform-origin: bottom center;
+            pointer-events: none; z-index: 15; 
         }
-        .loch-img.latest-dug {
-            z-index: 25; 
-        }
+        .loch-img.latest-dug { z-index: 25; }
 
         #schnabel { position: absolute; width: 0; height: 0; z-index: 20; pointer-events: none; --shift-x: -50%; --shift-y: 0%; --scale-correction: 1; }
         #schnabel-scale-wrapper { position: absolute; bottom: 0; left: 0; transform-origin: bottom center; }
@@ -79,7 +95,7 @@
             transform-origin: bottom center; display: block;
         }
 
-        /* Sprite Fixes & Poses */
+        /* Sprite Poses (v0.38 kompatibel) */
         #schnabel[data-sprite="stehend"] { --shift-x: -50%; --scale-correction: 1; }
         #schnabel[data-sprite="rauchend_1"] { --shift-x: -50%; --shift-y: 2%; --scale-correction: 1.05; }
         #schnabel[data-sprite="rauchend_2"] { --shift-x: -50.5%; --shift-y: 2%; --scale-correction: 1.05; }
@@ -88,7 +104,7 @@
         #schnabel[data-sprite^="buddelnd"], #schnabel[data-sprite="hurra"] { --scale-correction: 0.80; }
         #schnabel[data-sprite="kritzelnd"], #schnabel[data-sprite="haltend"] { --scale-correction: 0.80; }
 
-        /* Overlay Styles */
+        /* Overlay Styles (General) */
         .overlay-layer {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background-color: rgba(0,0,0,0.7); z-index: 100;
@@ -96,30 +112,28 @@
             flex-direction: column; color: #5a3d17; text-align: center;
         }
 
-        /* RESULT DISPLAY (Schmaler & Höher) */
-        #result-display {
+        /* NEU: Gemeinsame Klasse für alle Fund/Summary Panels */
+        .overlay-panel {
             background-color: #d4a351; border: 8px solid #8b5a2b;
             border-radius: 20px; padding: 30px 20px; display: flex;
             flex-direction: column; align-items: center; justify-content: space-between;
             position: relative; box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-            width: 85vw; max-width: 380px; /* Exakt gleiche Breite wie Summary */
-            min-height: 450px; /* Deutlich höher für große Bilder */
+            width: 85vw; max-width: 380px;
+            min-height: 450px;
         }
 
+        /* FUND DISPLAY */
         .found-img { 
-            height: 260px; /* Bild nochmal deutlich vergrößert! */
-            max-height: 45vh; 
-            width: auto; 
-            max-width: 100%;
-            object-fit: contain;
+            height: 260px; max-height: 45vh; 
+            width: auto; max-width: 100%; object-fit: contain;
         }
 
         .quote { 
             font-style: italic; font-weight: bold; margin: 15px 0 10px 0; 
-            font-size: 1.25rem; 
-            min-height: 3em; display: flex; align-items: center; justify-content: center; 
+            font-size: 1.25rem; min-height: 3em; display: flex; align-items: center; justify-content: center; 
         }
 
+        /* Buttons (General) */
         .run-btn {
             font-family: 'Comic Sans MS', sans-serif; font-size: 1.5rem;
             font-weight: bold; color: #fff; background-color: #8b5a2b;
@@ -128,17 +142,8 @@
             text-shadow: 2px 2px 0px #5a3d17;
         }
 
-        /* SUMMARY DISPLAY (Schmaler & Höher) */
-        #summary-display {
-            background-color: #d4a351; border: 8px solid #8b5a2b;
-            border-radius: 20px; padding: 30px 25px; display: flex;
-            flex-direction: column; align-items: center; position: relative;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-            width: 85vw; max-width: 380px; /* Exakt gleiche Breite wie Result */
-            min-height: 450px; /* Exakt gleiche Mindesthöhe wie Result */
-            max-height: 95%; overflow-y: auto;
-        }
-
+        /* SUMMARY DISPLAY */
+        #summary-display { max-height: 95%; overflow-y: auto; }
         #finds-list { list-style: none; padding: 0; margin: 20px 0; width: 100%; }
         #finds-list li { display: flex; align-items: center; justify-content: center; margin-bottom: 12px; font-size: 1.4rem; font-weight: bold;}
         .list-icon { width: 60px; height: 60px; object-fit: contain; margin-right: 15px; }
@@ -150,6 +155,7 @@
 
         #restart-btn { font-size: 1.3rem; padding: 12px 25px; margin-top: 25px; white-space: nowrap; background-color: #5a3d17; }
 
+        /* Buddeln Button */
         #btn-buddeln {
             position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
             font-family: 'Comic Sans MS', sans-serif; font-size: 1.5rem;
@@ -158,6 +164,26 @@
             padding: 10px 40px; cursor: pointer; z-index: 30; text-shadow: 2px 2px 0px #5a3d17;
         }
         #btn-buddeln:disabled { background-color: #b09a83; color: #e0d6cb; cursor: not-allowed; }
+
+        /* NEU: Anleitung Overlay Panel */
+        #instructions-panel {
+            text-align: left; /* Text linksbündig */
+            justify-content: space-around; /* Elemente verteilen */
+        }
+        
+        #instructions-title { font-size: 2.2rem; font-weight: bold; margin-bottom: 20px; text-decoration: underline; color: #5a3d17;}
+        #instructions-list { 
+            list-style: none; padding: 0; margin: 0 0 30px 0; width: 90%; 
+            font-size: 1.2rem; color: #5a3d17;
+        }
+        #instructions-list li {
+            margin-bottom: 15px; position: relative; padding-left: 25px; line-height: 1.4;
+        }
+        /* Kleines ägyptisches Symbol vor den Listenpunkten */
+        #instructions-list li::before {
+            content: '𓂀'; position: absolute; left: 0; top: 0; color: #8b5a2b; font-size: 1rem;
+        }
+
     </style>
 </head>
 <body>
@@ -165,6 +191,27 @@
 <div id="loading-screen">
     <h1>Expedition startet...</h1>
     <div class="progress-bar-container"><div id="progress-bar"></div></div>
+</div>
+
+<div id="start-screen">
+    <img id="start-logo" src="Buddel-Rum-Logo.png">
+    <div class="start-btn-container">
+        <button id="start-anleitung-btn" class="run-btn" style="font-size: 1.3rem; padding: 10px 30px;">Anleitung</button>
+        <button id="start-expedition-btn" class="run-btn" style="background-color: #5a3d17;">Expedition starten</button>
+    </div>
+</div>
+
+<div id="instructions-layer" class="overlay-layer">
+    <div id="instructions-panel" class="overlay-panel">
+        <div id="instructions-title">Anleitung</div>
+        <ul id="instructions-list">
+            <li>Gehe mit Schnabel auf Schatzsuche.</li>
+            <li>Laufe rum und buddel los.</li>
+            <li>Du darfst 3x buddeln.</li>
+            <li>Danach wird zusammengerechnet, was das Museum für deine Schätze zahlt.</li>
+        </ul>
+        <button id="confirm-instructions-btn" class="run-btn">un!</button>
+    </div>
 </div>
 
 <div id="game-container">
@@ -192,7 +239,7 @@
     <button id="btn-buddeln" disabled>Buddeln</button>
 
     <div id="result-layer" class="overlay-layer">
-        <div id="result-display">
+        <div id="result-display" class="overlay-panel">
             <img id="found-item-img" class="found-img" src="Niete.png">
             <p id="found-quote" class="quote"></p>
             <button id="confirm-find-btn" class="run-btn">un!</button>
@@ -200,7 +247,7 @@
     </div>
 
     <div id="summary-layer" class="overlay-layer">
-        <div id="summary-display">
+        <div id="summary-display" class="overlay-panel">
             <h2 style="margin-top:0; font-size: 2rem; margin-bottom: 10px;">Expedition beendet!</h2>
             <ul id="finds-list"></ul>
             
@@ -224,10 +271,12 @@
         'Buddel-Bursche-Hurra.png', 'Loch_neu.png', 'Währung.png', 'Kanope_Anubis_Stil-1.png', 'Niete.png',
         'Buddel-Bursche_kritzelnd.png', 'Buddel-Bursche_Penoi.png', 'Pergament_Penoi.png', 'Pergament.png',
         'Kanope_C3PO_Stil-2.png', 'Kanope_Dino_Stil-2.png', 'No_Fritteuse.png', 'Relief_Ailiens_Dino.png', 'Rosetta_un.png',
-        'Relief_Herbertep.png', 'Kanope_Herbertep_Stil-2.png', 'Herbertep.png', 'Dinosaurier.png'
+        'Relief_Herbertep.png', 'Kanope_Herbertep_Stil-2.png', 'Herbertep.png', 'Dinosaurier.png',
+        'Buddel-Rum-Logo.png' // NEU: Logo laden
     ];
     let loadedImages = 0;
     
+    // Item-Datenbank (Unverändert)
     const findItems = {
         'niete': { img: 'Niete.png', text: '', value: 0 },
         'kanope': { img: 'Kanope_Anubis_Stil-1.png', text: '"Die wird mir eine schöne Rolle Geld einbringen!"', value: 1 },
@@ -252,6 +301,11 @@
     const gameContainer = document.getElementById('game-container');
     const btnBuddeln = document.getElementById('btn-buddeln');
     
+    // Start Screen & Anleitung Elements
+    const startScreen = document.getElementById('start-screen');
+    const instructionsLayer = document.getElementById('instructions-layer');
+
+    // Layers & Panels (Refactored to classes)
     const resultLayer = document.getElementById('result-layer');
     const foundItemImg = document.getElementById('found-item-img');
     const foundQuote = document.getElementById('found-quote');
@@ -269,10 +323,11 @@
     
     let latestDugLochElement = null; 
 
+    // Preloader Callback
     function imageLoaded() {
         loadedImages++;
         document.getElementById('progress-bar').style.width = (loadedImages / imagesToLoad.length * 100) + '%';
-        if (loadedImages === imagesToLoad.length) setTimeout(initGame, 500);
+        if (loadedImages === imagesToLoad.length) setTimeout(initStartScreen, 500);
     }
     imagesToLoad.forEach(src => { const img = new Image(); img.onload = imageLoaded; img.onerror = imageLoaded; img.src = src; });
 
@@ -281,14 +336,36 @@
         schnabel.dataset.sprite = spriteState;
     }
 
-    function initGame() {
+    // NEU: Initialisiert den Start-Screen nach dem Laden
+    function initStartScreen() {
         document.getElementById('loading-screen').style.display = 'none';
-        gameContainer.style.display = 'block';
-        resetGame();
+        startScreen.style.display = 'flex'; // Startbildschirm anzeigen
     }
 
+    // Event Listeners für Start Screen
+    document.getElementById('start-expedition-btn').addEventListener('click', startExpedition);
+    document.getElementById('start-anleitung-btn').addEventListener('click', showInstructions);
+    document.getElementById('confirm-instructions-btn').addEventListener('click', hideInstructions);
+
+    function startExpedition() {
+        startScreen.style.display = 'none'; // Startbildschirm ausblenden
+        gameContainer.style.display = 'block'; // Spielfeld einblenden
+        resetGame(); // Expedition starten
+    }
+
+    function showInstructions() {
+        instructionsLayer.style.display = 'flex'; // Anleitung einblenden
+    }
+
+    function hideInstructions() {
+        instructionsLayer.style.display = 'none'; // Anleitung ausblenden
+    }
+
+    // Spiel-Logik (Unverändert, nur resetGame() wird von startExpedition() aufgerufen)
     function resetGame() {
+        // Overlay Layers schließen (aber nicht den Start Screen)
         document.querySelectorAll('.overlay-layer').forEach(l => l.style.display = 'none');
+        startScreen.style.display = 'none'; // Wichtig, falls Restart gedrückt wird
         btnBuddeln.style.display = 'block';
         inventory = [];
         dugFields.clear();
@@ -315,6 +392,7 @@
         stopAllTimers();
     }
 
+    // Core Game Mechanics (v0.38 - Unverändert)
     function getPixelCoordsFromGrid(gX, gY) {
         const rect = gridEl.getBoundingClientRect(), container = gameContainer.getBoundingClientRect();
         return {
@@ -375,6 +453,7 @@
         loch.className = 'loch-img latest-dug';
         latestDugLochElement = loch;
         
+        // Dynamische Perspektive für das Loch
         const bottomPos = 50 - (28 * currentScale);
         loch.style.bottom = bottomPos + '%';
         loch.style.transform = `translateX(-50%) scale(${currentScale})`; 
@@ -387,8 +466,8 @@
         const item = findItems[itemKey];
         inventory.push(itemKey);
 
-        document.getElementById('found-item-img').src = item.img;
-        document.getElementById('found-quote').innerText = item.text;
+        foundItemImg.src = item.img;
+        foundQuote.innerText = item.text;
         confirmFindBtn.innerText = item.buttonText || "un!"; 
         
         setTimeout(() => {
@@ -410,8 +489,8 @@
                     showingResult = true; 
                     confirmFindBtn.innerText = "un!"; 
                     
-                    document.getElementById('found-item-img').src = findItems['pergament-penoi'].img;
-                    document.getElementById('found-quote').innerText = findItems['pergament-penoi'].text;
+                    foundItemImg.src = findItems['pergament-penoi'].img;
+                    foundQuote.innerText = findItems['pergament-penoi'].text;
                     resultLayer.style.display = 'flex';
                     
                     inventory.push('pergament-penoi');
@@ -456,6 +535,7 @@
 
     restartBtn.addEventListener('click', resetGame);
 
+    // Movement mechanics (v0.38 - Unverändert)
     function startWalkAnimation(fromX, fromY, toX, toY) {
         clearInterval(walkInterval);
         
@@ -518,6 +598,8 @@
 
     fields.forEach(field => {
         field.addEventListener('click', (e) => {
+            if (gameContainer.style.display !== 'block') return; // Klicken nur erlauben, wenn das Spielfeld aktiv ist
+
             const xMark = document.createElement('div');
             xMark.className = 'tap-x'; xMark.innerText = 'X';
             
