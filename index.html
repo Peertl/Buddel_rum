@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Buddel rum! (v0.27)</title>
+    <title>Buddel rum! (v0.28)</title>
     <style>
         /* Deaktiviert den blauen Klick-Schein auf mobilen Geräten */
         * {
@@ -11,93 +11,47 @@
         }
 
         body, html {
-            margin: 0;
-            padding: 0;
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            font-family: 'Comic Sans MS', sans-serif;
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            overflow: hidden; font-family: 'Comic Sans MS', sans-serif;
             background-color: #e5b85c; 
         }
         
         #loading-screen {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background-color: #e5b85c;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 9999;
-            color: #5a3d17;
-        }
-
-        #loading-screen h1 {
-            font-size: 2rem;
-            margin-bottom: 20px;
-            text-shadow: 1px 1px 0px #fff;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: #e5b85c; display: flex; flex-direction: column;
+            justify-content: center; align-items: center; z-index: 9999; color: #5a3d17;
         }
 
         .progress-bar-container {
-            width: 70%;
-            max-width: 300px;
-            height: 25px;
-            border: 3px solid #5a3d17;
-            background-color: #d4a351;
-            border-radius: 12px;
-            overflow: hidden;
-            position: relative;
+            width: 70%; max-width: 300px; height: 25px;
+            border: 3px solid #5a3d17; background-color: #d4a351;
+            border-radius: 12px; overflow: hidden; position: relative;
         }
 
-        #progress-bar {
-            width: 0%;
-            height: 100%;
-            background-color: #8b5a2b;
-            transition: width 0.3s ease;
-        }
+        #progress-bar { width: 0%; height: 100%; background-color: #8b5a2b; transition: width 0.3s ease; }
 
         #game-container {
-            position: relative;
-            width: 100vw;
-            height: 100dvh; 
-            max-width: 600px;
-            margin: 0 auto;
-            background-image: url('Hintergrund.png');
-            background-size: cover;
-            background-position: center 80%; 
-            overflow: hidden;
-            display: none; 
+            position: relative; width: 100vw; height: 100dvh; max-width: 600px;
+            margin: 0 auto; background-image: url('Hintergrund.png');
+            background-size: cover; background-position: center 80%; 
+            overflow: hidden; display: none; 
         }
 
         #grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            display: grid; grid-template-columns: repeat(3, 1fr);
             grid-template-rows: repeat(4, 1fr);
-            width: 84%;
-            height: 50%; 
-            position: absolute;
-            top: 35%; 
-            left: 8%;
-            z-index: 10;
+            width: 84%; height: 50%; position: absolute;
+            top: 35%; left: 8%; z-index: 10;
         }
 
-        .field {
-            position: relative;
-            cursor: pointer;
-            pointer-events: auto;
-        }
+        .field { position: relative; cursor: pointer; pointer-events: auto; }
 
-        /* --- Das Rote Markierungskreuz (Perspektivisch flach) --- */
+        /* --- Das Rote Markierungskreuz (Perspektivisch flach & zentriert) --- */
         .tap-x {
-            position: absolute;
-            color: #b22222; /* Dunkelrot */
-            font-size: 3rem;
-            font-weight: 900;
-            pointer-events: none;
-            z-index: 999;
-            /* rotateX(60deg) kippt das X nach hinten, sodass es flach auf dem Boden liegt! */
-            animation: fadeX 0.5s ease-out forwards;
-            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.4);
+            position: absolute; color: #b22222; font-size: 3rem;
+            font-weight: 900; pointer-events: none; transform: translate(-50%, -50%);
+            z-index: 999; animation: fadeX 0.5s ease-out forwards;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
             font-family: Arial, sans-serif;
         }
 
@@ -107,204 +61,111 @@
         }
 
         .loch-img {
-            position: absolute;
-            bottom: 25%; 
-            left: 50%;
-            width: 110px; 
-            transform-origin: bottom center;
-            pointer-events: none;
-            z-index: 5;
+            position: absolute; bottom: 25%; left: 50%;
+            width: 110px; transform-origin: bottom center;
+            pointer-events: none; z-index: 5;
         }
 
-        #schnabel {
-            position: absolute;
-            width: 0;
-            height: 0;
-            z-index: 20;
-            pointer-events: none;
-            --shift-x: -50%;
-            --shift-y: 0%;
-            --scale-correction: 1;
-        }
-
-        #schnabel-scale-wrapper {
-            position: absolute;
-            bottom: 0; 
-            left: 0;
-            transform-origin: bottom center;
-        }
-
+        #schnabel { position: absolute; width: 0; height: 0; z-index: 20; pointer-events: none; --shift-x: -50%; --shift-y: 0%; --scale-correction: 1; }
+        #schnabel-scale-wrapper { position: absolute; bottom: 0; left: 0; transform-origin: bottom center; }
         #schnabel-img {
-            position: absolute;
-            bottom: 0;
-            height: 180px; 
-            width: auto;
+            position: absolute; bottom: 0; height: 180px; width: auto;
             transform: translate(var(--shift-x), var(--shift-y)) scale(var(--scale-correction)); 
-            transform-origin: bottom center;
-            display: block;
+            transform-origin: bottom center; display: block;
         }
 
         /* CSS-PERFEKTIONS-KORREKTUREN */
         #schnabel[data-sprite="stehend"] { --shift-x: -50%; --scale-correction: 1; }
         #schnabel[data-sprite="rauchend_1"] { --shift-x: -50%; --shift-y: 2%; --scale-correction: 1.05; }
         #schnabel[data-sprite="rauchend_2"] { --shift-x: -50.5%; --shift-y: 2%; --scale-correction: 1.05; }
-        #schnabel[data-sprite="laufend_links_1"] { --shift-x: -50%; --scale-correction: 1; }
-        #schnabel[data-sprite="laufend_links_2"] { --shift-x: -50%; --scale-correction: 1; }
-        #schnabel[data-sprite="laufend_rechts_1"] { --shift-x: -50%; --scale-correction: 1; }
-        #schnabel[data-sprite="laufend_rechts_2"] { --shift-x: -50%; --scale-correction: 1; }
-        #schnabel[data-sprite="laufend_zurück_links_1"] { --shift-x: -50%; --scale-correction: 0.96; }
-        #schnabel[data-sprite="laufend_zurück_links_2"] { --shift-x: -50%; --scale-correction: 0.96; }
-        #schnabel[data-sprite="laufend_zurück_rechts_1"] { --shift-x: -50%; --scale-correction: 0.96; }
-        #schnabel[data-sprite="laufend_zurück_rechts_2"] { --shift-x: -50%; --scale-correction: 0.96; }
-        #schnabel[data-sprite="buddelnd_1"] { --shift-x: -50%; --scale-correction: 0.80; }
-        #schnabel[data-sprite="buddelnd_2"] { --shift-x: -50%; --scale-correction: 0.80; }
-        #schnabel[data-sprite="hurra"] { --shift-x: -50%; --scale-correction: 0.80; }
+        #schnabel[data-sprite^="laufend"] { --shift-x: -50%; --scale-correction: 1; }
+        #schnabel[data-sprite^="laufend_zurück"] { --scale-correction: 0.96; }
+        #schnabel[data-sprite^="buddelnd"], #schnabel[data-sprite="hurra"] { --scale-correction: 0.80; }
 
         /* Overlay Styles */
         .overlay-layer {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background-color: rgba(0,0,0,0.7);
-            z-index: 100;
-            display: none;
-            justify-content: center;
-            align-items: center;
-            flex-direction: column;
-            color: #5a3d17;
-            text-align: center;
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.7); z-index: 100;
+            display: none; justify-content: center; align-items: center;
+            flex-direction: column; color: #5a3d17; text-align: center;
         }
 
-        #result-display, #summary-display {
-            background-color: #d4a351;
-            border: 8px solid #8b5a2b;
-            border-radius: 20px;
-            padding: 30px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            position: relative;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-            max-width: 85%;
-            max-height: 90%;
-            overflow-y: auto;
+        /* RESULT DISPLAY (Gleiche Größe für Niete und Schatz) */
+        #result-display {
+            background-color: #d4a351; border: 8px solid #8b5a2b;
+            border-radius: 20px; padding: 25px 20px; display: flex;
+            flex-direction: column; align-items: center; justify-content: space-between;
+            position: relative; box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            min-width: 260px; min-height: 280px; /* Zwingt das Fenster auf eine feste Größe */
         }
 
-        .found-img {
-            width: 130px;
-            margin-bottom: 15px;
+        .found-img { 
+            height: 140px; /* Feste Höhe, damit Bilder (auch Niete) gleich groß wirken */
+            width: auto; 
+            max-width: 100%;
+            object-fit: contain;
         }
 
-        .quote {
-            font-style: italic;
-            font-weight: bold;
-            margin: 10px 0;
-            font-size: 1.1rem;
-            min-height: 1.2em; /* Verhindert das Springen des Layouts bei leerem Text */
+        .quote { 
+            font-style: italic; font-weight: bold; margin: 10px 0; 
+            font-size: 1.1rem; 
+            min-height: 3em; /* Reserviert Platz für 2 Zeilen Text, verhindert Springen */
+            display: flex; align-items: center; justify-content: center;
         }
 
         .run-btn {
-            font-family: 'Comic Sans MS', sans-serif;
-            font-size: 1.5rem;
-            font-weight: bold;
-            color: #fff;
-            background-color: #8b5a2b;
-            border: 4px solid #5a3d17;
-            border-radius: 15px;
-            padding: 10px 40px;
-            cursor: pointer;
-            margin-top: 15px;
+            font-family: 'Comic Sans MS', sans-serif; font-size: 1.5rem;
+            font-weight: bold; color: #fff; background-color: #8b5a2b;
+            border: 4px solid #5a3d17; border-radius: 15px;
+            padding: 8px 30px; cursor: pointer; margin-top: auto;
             text-shadow: 2px 2px 0px #5a3d17;
+        }
+
+        /* SUMMARY DISPLAY (Kompakter) */
+        #summary-display {
+            background-color: #d4a351; border: 8px solid #8b5a2b;
+            border-radius: 20px; padding: 20px 25px; display: flex;
+            flex-direction: column; align-items: center; position: relative;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            max-width: 85%; max-height: 90%; overflow-y: auto;
         }
 
         /* Summary List */
-        #finds-list {
-            list-style: none;
-            padding: 0;
-            margin: 20px 0;
-            width: 100%;
-        }
-
-        #finds-list li {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 15px;
-            font-size: 1.3rem;
-            font-weight: bold;
-        }
-
-        .list-icon {
-            width: 50px;
-            margin-right: 15px;
-        }
+        #finds-list { list-style: none; padding: 0; margin: 15px 0; width: 100%; }
+        #finds-list li { display: flex; align-items: center; justify-content: center; margin-bottom: 8px; font-size: 1.2rem; font-weight: bold;}
+        .list-icon { width: 40px; height: 40px; object-fit: contain; margin-right: 10px; }
 
         /* Total Summary */
-        .summary-header {
-            display: flex;
-            align-items: center;
+        .summary-header { display: flex; align-items: center; margin-top: 10px; border-top: 3px dashed #8b5a2b; padding-top: 15px; }
+        .total-currency-img { width: 55px; margin-right: 15px; }
+        .summary-title { font-size: 1.4rem; font-weight: bold; }
+        .total-amount-text { font-size: 1.8rem; font-weight: 900; margin-top: 5px; }
+
+        /* Einzeiliger, flacherer Restart-Button */
+        #restart-btn {
+            font-size: 1.1rem; /* Kleinere Schrift */
+            padding: 10px 20px; 
             margin-top: 20px;
-            border-top: 3px dashed #8b5a2b;
-            padding-top: 20px;
-        }
-
-        .total-currency-img {
-            width: 70px;
-            margin-right: 15px;
-        }
-
-        .summary-title {
-            font-size: 1.6rem;
-            font-weight: bold;
-        }
-
-        .total-amount-text {
-            font-size: 2rem;
-            font-weight: 900;
-            margin-top: 5px;
-        }
-
-        /* UI elements */
-        #ui-layer {
-            position: absolute;
-            bottom: 20px;
-            left: 0;
-            width: 100%;
-            display: flex;
-            justify-content: center;
-            z-index: 30;
+            white-space: nowrap; /* Zwingt den Text in eine Zeile! */
+            background-color: #5a3d17;
         }
 
         #btn-buddeln {
-            font-family: 'Comic Sans MS', sans-serif;
-            font-size: 1.5rem;
-            font-weight: bold;
-            color: #fff;
-            background-color: #8b5a2b;
-            border: 4px solid #5a3d17;
-            border-radius: 15px;
-            padding: 10px 40px;
-            cursor: pointer;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+            font-family: 'Comic Sans MS', sans-serif; font-size: 1.5rem;
+            font-weight: bold; color: #fff; background-color: #8b5a2b;
+            border: 4px solid #5a3d17; border-radius: 15px;
+            padding: 10px 40px; cursor: pointer; z-index: 30;
             text-shadow: 2px 2px 0px #5a3d17;
         }
-
-        #btn-buddeln:disabled {
-            background-color: #b09a83;
-            border-color: #8c7b69;
-            color: #e0d6cb;
-            cursor: not-allowed;
-            text-shadow: none;
-            box-shadow: none;
-        }
+        #btn-buddeln:disabled { background-color: #b09a83; color: #e0d6cb; cursor: not-allowed; }
     </style>
 </head>
 <body>
 
 <div id="loading-screen">
     <h1>Expedition startet...</h1>
-    <div class="progress-bar-container">
-        <div id="progress-bar"></div>
-    </div>
+    <div class="progress-bar-container"><div id="progress-bar"></div></div>
 </div>
 
 <div id="game-container">
@@ -325,17 +186,15 @@
 
     <div id="schnabel" data-sprite="stehend">
         <div id="schnabel-scale-wrapper">
-            <img id="schnabel-img" src="Schnabel_stehend.png" alt="Schnabel">
+            <img id="schnabel-img" src="Schnabel_stehend.png">
         </div>
     </div>
 
-    <div id="ui-layer">
-        <button id="btn-buddeln" disabled>Buddeln</button>
-    </div>
+    <button id="btn-buddeln" disabled>Buddeln</button>
 
     <div id="result-layer" class="overlay-layer">
         <div id="result-display">
-            <img id="found-item-img" class="found-img" src="Niete.png" alt="Fundstück">
+            <img id="found-item-img" class="found-img" src="Niete.png">
             <p id="found-quote" class="quote"></p>
             <button id="confirm-find-btn" class="run-btn">un!</button>
         </div>
@@ -343,92 +202,53 @@
 
     <div id="summary-layer" class="overlay-layer">
         <div id="summary-display">
-            <h2 style="margin-top:0; font-size: 2rem;">Expedition beendet!</h2>
-            
-            <ul id="finds-list">
-                </ul>
+            <h2 style="margin-top:0; font-size: 1.8rem; margin-bottom: 10px;">Expedition beendet!</h2>
+            <ul id="finds-list"></ul>
             
             <div class="summary-header">
-                <img src="Währung.png" class="total-currency-img" alt="Rolle Geld">
+                <img src="Währung.png" class="total-currency-img">
                 <span class="summary-title">Verdientes Geld:</span>
             </div>
             <div id="final-sum-text" class="total-amount-text">0 Rollen</div>
             
-            <button id="restart-btn" class="run-btn" style="background-color: #5a3d17; margin-top: 30px;">Neue Expedition starten</button>
+            <button id="restart-btn" class="run-btn">Neue Expedition starten</button>
         </div>
     </div>
 </div>
 
 <script>
     const imagesToLoad = [
-        'Hintergrund.png', 'Schnabel_stehend.png',
-        'Schnabel_laufend_links_1.png', 'Schnabel_laufend_links_2.png',
-        'Schnabel_laufend_rechts_1.png', 'Schnabel_laufend_rechts_2.png',
-        'Schnabel_laufend_zurück_links_1.png', 'Schnabel_laufend_zurück_links_2.png',
-        'Schnabel_laufend_zurück_rechts_1.png', 'Schnabel_laufend_zurück_rechts_2.png',
-        'Schnabel_rauchend_1.png', 'Schnabel_rauchend_2.png',
-        'Buddel-Bursche_buddelnd-1.png', 'Buddel-Bursche_buddelnd-2.png',
-        'Buddel-Bursche-Hurra.png', 'Loch.png',
-        'Währung.png', 'Kanope_Anubis_Stil-1.png', 'Niete.png'
+        'Hintergrund.png', 'Schnabel_stehend.png', 'Schnabel_laufend_links_1.png', 'Schnabel_laufend_links_2.png',
+        'Schnabel_laufend_rechts_1.png', 'Schnabel_laufend_rechts_2.png', 'Schnabel_laufend_zurück_links_1.png',
+        'Schnabel_laufend_zurück_links_2.png', 'Schnabel_laufend_zurück_rechts_1.png', 'Schnabel_laufend_zurück_rechts_2.png',
+        'Schnabel_rauchend_1.png', 'Schnabel_rauchend_2.png', 'Buddel-Bursche_buddelnd-1.png', 'Buddel-Bursche_buddelnd-2.png',
+        'Buddel-Bursche-Hurra.png', 'Loch.png', 'Währung.png', 'Kanope_Anubis_Stil-1.png', 'Niete.png'
     ];
     let loadedImages = 0;
-
-    // Item-Datenbank (Werte & Sprüche)
+    
     const findItems = {
         'niete': { img: 'Niete.png', text: '', value: 0 },
         'kanope': { img: 'Kanope_Anubis_Stil-1.png', text: '"Die wird mir eine schöne Rolle Geld einbringen!"', value: 1 }
     };
 
-    const fields = document.querySelectorAll('.field');
-    const schnabel = document.getElementById('schnabel'); 
-    const schnabelScaleWrapper = document.getElementById('schnabel-scale-wrapper'); 
+    const schnabel = document.getElementById('schnabel');
     const schnabelImg = document.getElementById('schnabel-img');
+    const schnabelScaleWrapper = document.getElementById('schnabel-scale-wrapper');
     const gridEl = document.getElementById('grid');
     const gameContainer = document.getElementById('game-container');
     const btnBuddeln = document.getElementById('btn-buddeln');
     
-    // Result Layer
-    const resultLayer = document.getElementById('result-layer');
-    const foundItemImg = document.getElementById('found-item-img');
-    const foundQuote = document.getElementById('found-quote');
-    const confirmFindBtn = document.getElementById('confirm-find-btn');
-    
-    // Summary Layer
-    const summaryLayer = document.getElementById('summary-layer');
-    const findsList = document.getElementById('finds-list');
-    const finalSumText = document.getElementById('final-sum-text');
-    const restartBtn = document.getElementById('restart-btn');
-
-    let isMoving = false;
-    let isDigging = false; 
-    let showingResult = false;
-    let walkStep = 1;
-    let walkInterval = null;
-    let currentDirection = null; 
-    
-    let currentGridPos = { x: 1, y: 0.5 }; 
-    let dugFields = new Set(); 
-    let inventory = [];
-    let gameItems = []; // Speichert die verdeckten Items
-
-    let idleTimer = null;
-    let smokeInterval = null;
-    let digActionInterval = null;
+    let isMoving = false, isDigging = false, showingResult = false;
+    let walkStep = 1, walkInterval = null, currentDirection = null;
+    let currentGridPos = { x: 1, y: 0.5 }, dugFields = new Set(), inventory = [], gameItems = [];
+    let idleTimer = null, smokeInterval = null, digActionInterval = null;
 
     function imageLoaded() {
         loadedImages++;
         document.getElementById('progress-bar').style.width = (loadedImages / imagesToLoad.length * 100) + '%';
-        if (loadedImages === imagesToLoad.length) {
-            setTimeout(initGame, 500); 
-        }
+        if (loadedImages === imagesToLoad.length) setTimeout(initGame, 500);
     }
-
-    imagesToLoad.forEach(src => {
-        const img = new Image();
-        img.onload = imageLoaded;
-        img.onerror = imageLoaded; 
-        img.src = src;
-    });
+    imagesToLoad.forEach(src => { const img = new Image(); img.onload = imageLoaded; img.onerror = imageLoaded; img.src = src; });
 
     function setSchnabelImage(filename, spriteState) {
         schnabelImg.src = filename;
@@ -442,279 +262,184 @@
     }
 
     function resetGame() {
-        resultLayer.style.display = 'none';
-        summaryLayer.style.display = 'none';
+        document.querySelectorAll('.overlay-layer').forEach(l => l.style.display = 'none');
         btnBuddeln.style.display = 'block';
-        
         inventory = [];
         dugFields.clear();
         document.querySelectorAll('.loch-img').forEach(img => img.remove());
         
-        // 4 Nieten, 8 Kanopen -> Zufällig mischen
-        gameItems = Array(4).fill('niete').concat(Array(8).fill('kanope'));
-        gameItems.sort(() => Math.random() - 0.5); 
+        // Loot verteilen: 4 Nieten, 8 Kanopen
+        gameItems = Array(4).fill('niete').concat(Array(8).fill('kanope')).sort(() => Math.random() - 0.5);
         
         currentGridPos = { x: 1, y: 0.5 };
-        isDigging = false; 
-        isMoving = false; 
-        showingResult = false;
-        
+        isDigging = false; isMoving = false; showingResult = false;
         setSchnabelImage('Schnabel_stehend.png', 'stehend');
-        stopAllTimers();
         
-        const coords = getPixelCoordsFromGrid(currentGridPos.x, currentGridPos.y);
+        const coords = getPixelCoordsFromGrid(1, 0.5);
         updateSchnabelVisuals(coords.x, coords.y);
         updateButtonState();
+        stopAllTimers();
     }
 
     function getPixelCoordsFromGrid(gX, gY) {
-        const rect = gridEl.getBoundingClientRect();
-        const container = gameContainer.getBoundingClientRect();
-        const cellWidth = rect.width / 3;
-        const cellHeight = rect.height / 4;
-        const pxX = (rect.left - container.left) + (gX - 0.5) * cellWidth;
-        const pxY = (rect.top - container.top) + (gY - 0.5) * cellHeight;
-        return { x: pxX, y: pxY };
+        const rect = gridEl.getBoundingClientRect(), container = gameContainer.getBoundingClientRect();
+        return {
+            x: (rect.left - container.left) + (gX - 0.5) * (rect.width / 3),
+            y: (rect.top - container.top) + (gY - 0.5) * (rect.height / 4)
+        };
     }
 
     function updateSchnabelVisuals(pxX, pxY) {
-        const yStart = getPixelCoordsFromGrid(1, 0.5).y;
-        const yBottom4 = getPixelCoordsFromGrid(1, 4.0).y;
-        let progress = (pxY - yStart) / (yBottom4 - yStart);
-        progress = Math.max(0, Math.min(1, progress)); 
-        const finalScale = 0.50 + (progress * 0.50); 
-        schnabel.style.left = pxX + 'px'; 
-        schnabel.style.top = pxY + 'px'; 
-        schnabelScaleWrapper.style.transform = `scale(${Math.max(0.1, finalScale)})`; 
-        return finalScale; 
+        const yStart = getPixelCoordsFromGrid(1, 0.5).y, yBottom = getPixelCoordsFromGrid(1, 4.0).y;
+        const scale = 0.50 + (Math.max(0, Math.min(1, (pxY - yStart) / (yBottom - yStart))) * 0.50);
+        schnabel.style.left = pxX + 'px'; schnabel.style.top = pxY + 'px';
+        schnabelScaleWrapper.style.transform = `scale(${scale})`;
+        return scale;
     }
 
-    function stopAllTimers() {
-        clearTimeout(idleTimer);
-        clearInterval(smokeInterval);
-        clearInterval(digActionInterval);
-    }
+    function stopAllTimers() { clearTimeout(idleTimer); clearInterval(smokeInterval); clearInterval(digActionInterval); }
 
     function startIdleTimer() {
         stopAllTimers();
-        if (currentGridPos.y === 0.5 || showingResult) return; 
-
+        if (currentGridPos.y === 0.5 || showingResult) return;
         idleTimer = setTimeout(() => {
-            let smokeStep = 1;
-            setSchnabelImage(`Schnabel_rauchend_${smokeStep}.png`, `rauchend_${smokeStep}`);
+            let step = 1;
+            setSchnabelImage(`Schnabel_rauchend_${step}.png`, `rauchend_${step}`);
             smokeInterval = setInterval(() => {
-                smokeStep = smokeStep === 1 ? 2 : 1;
-                setSchnabelImage(`Schnabel_rauchend_${smokeStep}.png`, `rauchend_${smokeStep}`);
-            }, 1500); 
-        }, 3000); 
+                step = step === 1 ? 2 : 1;
+                setSchnabelImage(`Schnabel_rauchend_${step}.png`, `rauchend_${step}`);
+            }, 1500);
+        }, 3000);
     }
 
     function updateButtonState() {
-        const fieldKey = `${currentGridPos.x}-${currentGridPos.y}`;
-        if (!isMoving && !isDigging && !showingResult && currentGridPos.y !== 0.5 && !dugFields.has(fieldKey) && dugFields.size < 3) {
-            btnBuddeln.disabled = false;
-        } else {
-            btnBuddeln.disabled = true;
-        }
+        const key = `${currentGridPos.x}-${currentGridPos.y}`;
+        btnBuddeln.disabled = (isMoving || isDigging || showingResult || currentGridPos.y === 0.5 || dugFields.has(key) || dugFields.size >= 3);
     }
 
     btnBuddeln.addEventListener('click', () => {
-        if (btnBuddeln.disabled) return;
-        
-        isDigging = true;
-        updateButtonState(); 
-        stopAllTimers();
-
-        let digStep = 1;
-        setSchnabelImage(`Buddel-Bursche_buddelnd-${digStep}.png`, `buddelnd_${digStep}`);
-        let digTime = 0;
-        
+        isDigging = true; updateButtonState(); stopAllTimers();
+        let step = 1, elapsed = 0;
+        setSchnabelImage(`Buddel-Bursche_buddelnd-${step}.png`, `buddelnd_${step}`);
         digActionInterval = setInterval(() => {
-            digStep = digStep === 1 ? 2 : 1;
-            setSchnabelImage(`Buddel-Bursche_buddelnd-${digStep}.png`, `buddelnd_${digStep}`);
-            digTime += 500;
-
-            if (digTime >= 4000) {
-                clearInterval(digActionInterval);
-                finishDigging();
-            }
+            step = step === 1 ? 2 : 1; setSchnabelImage(`Buddel-Bursche_buddelnd-${step}.png`, `buddelnd_${step}`);
+            elapsed += 500;
+            if (elapsed >= 4000) { clearInterval(digActionInterval); finishDigging(); }
         }, 500);
     });
 
     function finishDigging() {
         const fieldEl = document.querySelector(`.field[data-x="${currentGridPos.x}"][data-y="${currentGridPos.y}"]`);
-        const fieldIndex = parseInt(fieldEl.dataset.index);
+        dugFields.add(`${currentGridPos.x}-${currentGridPos.y}`);
+        const currentScale = updateSchnabelVisuals(getPixelCoordsFromGrid(currentGridPos.x, currentGridPos.y).x, getPixelCoordsFromGrid(currentGridPos.x, currentGridPos.y).y);
         
-        dugFields.add(`${currentGridPos.x}-${currentGridPos.y}`); 
-        
-        const coords = getPixelCoordsFromGrid(currentGridPos.x, currentGridPos.y);
-        const currentScale = updateSchnabelVisuals(coords.x, coords.y);
-
-        const lochImg = document.createElement('img');
-        lochImg.src = 'Loch.png';
-        lochImg.className = 'loch-img';
-        lochImg.style.transform = `translateX(-50%) scaleX(-${currentScale}) scaleY(${currentScale})`;
-        fieldEl.appendChild(lochImg);
+        const loch = document.createElement('img');
+        loch.src = 'Loch.png'; loch.className = 'loch-img';
+        loch.style.transform = `translateX(-50%) scaleX(-${currentScale}) scaleY(${currentScale})`;
+        fieldEl.appendChild(loch);
 
         setSchnabelImage('Buddel-Bursche-Hurra.png', 'hurra');
-        showingResult = true;
-        updateButtonState();
+        showingResult = true; updateButtonState();
 
-        const itemKey = gameItems[fieldIndex - 1];
+        const itemKey = gameItems[parseInt(fieldEl.dataset.index) - 1];
         const item = findItems[itemKey];
         inventory.push(itemKey);
 
-        foundItemImg.src = item.img;
-        foundQuote.innerText = item.text;
-        resultLayer.style.display = 'flex'; 
+        document.getElementById('found-item-img').src = item.img;
+        document.getElementById('found-quote').innerText = item.text;
+        
+        // 1 Sekunde Verzögerung für die Hurra-Animation!
+        setTimeout(() => {
+            document.getElementById('result-layer').style.display = 'flex';
+        }, 1000);
     }
 
-    confirmFindBtn.addEventListener('click', () => {
-        resultLayer.style.display = 'none';
-        showingResult = false;
-        isDigging = false;
-        
+    document.getElementById('confirm-find-btn').addEventListener('click', () => {
+        document.getElementById('result-layer').style.display = 'none';
+        showingResult = false; isDigging = false;
         if (dugFields.size >= 3) {
             showSummary();
         } else {
             setSchnabelImage('Schnabel_stehend.png', 'stehend');
-            updateButtonState();
-            startIdleTimer();
+            updateButtonState(); startIdleTimer();
         }
     });
 
     function showSummary() {
-        findsList.innerHTML = ''; 
+        const list = document.getElementById('finds-list');
+        list.innerHTML = '';
         let total = 0;
-        
-        inventory.forEach((key) => {
+        inventory.forEach(key => {
             const item = findItems[key];
             total += item.value;
-            
             const li = document.createElement('li');
             const rollText = item.value === 1 ? "1 Rolle" : `${item.value} Rollen`;
             li.innerHTML = `<img src="${item.img}" class="list-icon"> <span>${rollText}</span>`;
-            findsList.appendChild(li);
+            list.appendChild(li);
         });
-
-        finalSumText.innerText = total === 1 ? "1 Rolle" : `${total} Rollen`;
-        
+        document.getElementById('final-sum-text').innerText = total === 1 ? "1 Rolle" : `${total} Rollen`;
+        document.getElementById('summary-layer').style.display = 'flex';
         btnBuddeln.style.display = 'none';
-        summaryLayer.style.display = 'flex'; 
     }
 
-    restartBtn.addEventListener('click', resetGame);
+    document.getElementById('restart-btn').addEventListener('click', resetGame);
 
-    function startWalkAnimation(fromX, fromY, toX, toY) {
-        clearInterval(walkInterval);
+    function moveToTarget(tX, tY) {
+        stopAllTimers(); updateButtonState();
+        const startCoords = getPixelCoordsFromGrid(currentGridPos.x, currentGridPos.y), targetCoords = getPixelCoordsFromGrid(tX, tY);
         
-        currentDirection = "";
-        let dx = toX - fromX;
-        let dy = toY - fromY;
-
-        if (Math.abs(dx) < 1) { 
-            if (dy < 0) currentDirection = "zurück_rechts"; 
-            else currentDirection = "rechts";               
-        } else if (dx < 0) {
-            if (dy < 0) currentDirection = "zurück_links";  
-            else currentDirection = "links";                
-        } else {
-            if (dy < 0) currentDirection = "zurück_rechts"; 
-            else currentDirection = "rechts";               
-        }
-
-        walkStep = 1;
-        setSchnabelImage(`Schnabel_laufend_${currentDirection}_${walkStep}.png`, `laufend_${currentDirection}_${walkStep}`);
-
-        walkInterval = setInterval(() => {
-            walkStep = walkStep === 1 ? 2 : 1;
-            setSchnabelImage(`Schnabel_laufend_${currentDirection}_${walkStep}.png`, `laufend_${currentDirection}_${walkStep}`);
-        }, 180); 
-    }
-
-    function stopWalkAnimation() {
-        clearInterval(walkInterval);
-        setSchnabelImage('Schnabel_stehend.png', 'stehend');
-        walkStep = 1;
-        currentDirection = null; 
-    }
-
-    function moveToTarget(targetX, targetY) {
-        stopAllTimers(); 
-        updateButtonState();
-
-        const startCoords = getPixelCoordsFromGrid(currentGridPos.x, currentGridPos.y);
-        const targetCoords = getPixelCoordsFromGrid(targetX, targetY);
-
-        startWalkAnimation(startCoords.x, startCoords.y, targetCoords.x, targetCoords.y);
+        currentDirection = (tX < currentGridPos.x) ? (tY < currentGridPos.y ? "zurück_links" : "links") : (tY < currentGridPos.y ? "zurück_rechts" : "rechts");
+        if (Math.abs(tX - currentGridPos.x) < 0.1) currentDirection = (tY < currentGridPos.y) ? "zurück_rechts" : "rechts";
+        
+        walkStep = 1; setSchnabelImage(`Schnabel_laufend_${currentDirection}_${walkStep}.png`, `laufend_${currentDirection}_${walkStep}`);
+        walkInterval = setInterval(() => { walkStep = walkStep === 1 ? 2 : 1; setSchnabelImage(`Schnabel_laufend_${currentDirection}_${walkStep}.png`, `laufend_${currentDirection}_${walkStep}`); }, 180);
 
         const dist = Math.sqrt(Math.pow(targetCoords.x - startCoords.x, 2) + Math.pow(targetCoords.y - startCoords.y, 2));
-        const avgScaleBase = (updateSchnabelVisuals(startCoords.x, startCoords.y) + updateSchnabelVisuals(targetCoords.x, targetCoords.y)) / 2;
-        const duration = (dist * 6) / avgScaleBase; 
-        
+        const duration = (dist * 6) / ((updateSchnabelVisuals(startCoords.x, startCoords.y) + updateSchnabelVisuals(targetCoords.x, targetCoords.y)) / 2);
         let startTime = null;
 
         function animate(time) {
             if (!startTime) startTime = time;
             const progress = Math.min((time - startTime) / duration, 1);
-
-            updateSchnabelVisuals(
-                startCoords.x + (targetCoords.x - startCoords.x) * progress, 
-                startCoords.y + (targetCoords.y - startCoords.y) * progress
-            );
-
-            if (progress < 1) {
-                requestAnimationFrame(animate);
-            } else {
-                currentGridPos.x = targetX;
-                currentGridPos.y = targetY;
-                isMoving = false;
-                stopWalkAnimation();
-                
-                const finalCoords = getPixelCoordsFromGrid(targetX, targetY);
-                updateSchnabelVisuals(finalCoords.x, finalCoords.y);
-                
-                updateButtonState();
-                startIdleTimer();
+            updateSchnabelVisuals(startCoords.x + (targetCoords.x - startCoords.x) * progress, startCoords.y + (targetCoords.y - startCoords.y) * progress);
+            if (progress < 1) requestAnimationFrame(animate);
+            else {
+                currentGridPos = { x: tX, y: tY }; isMoving = false; clearInterval(walkInterval);
+                setSchnabelImage('Schnabel_stehend.png', 'stehend');
+                updateButtonState(); startIdleTimer();
             }
         }
         requestAnimationFrame(animate);
     }
 
-    // Klick-Logik auf die Felder (inklusive Tap-X Markierung)
+    // Felder: X Markierung zentriert und Bewegung starten
     fields.forEach(field => {
         field.addEventListener('click', (e) => {
-            // Das X generieren
+            if (isMoving || isDigging || showingResult || dugFields.size >= 3) return;
+
+            const tX = parseInt(field.dataset.x);
+            const tY = parseInt(field.dataset.y);
+
+            // Verhindern, dass er auf das gleiche Feld läuft
+            if(tX === currentGridPos.x && tY === currentGridPos.y) return;
+
+            // X generieren: Positioniert sich exakt in der Mitte des angeklickten HTML-Feldes (.field)
             const xMark = document.createElement('div');
-            xMark.innerText = 'X';
-            xMark.className = 'tap-x';
+            xMark.className = 'tap-x'; xMark.innerText = 'X';
             
-            const rect = gameContainer.getBoundingClientRect();
-            // Koordinaten je nach Maus oder Touch
-            let clientX = e.clientX;
-            let clientY = e.clientY;
-            if (e.touches && e.touches.length > 0) {
-                clientX = e.touches[0].clientX;
-                clientY = e.touches[0].clientY;
-            }
+            const rect = field.getBoundingClientRect();
+            const containerRect = gameContainer.getBoundingClientRect();
+            const centerX = (rect.left - containerRect.left) + rect.width / 2;
+            const centerY = (rect.top - containerRect.top) + rect.height / 2;
             
-            xMark.style.left = (clientX - rect.left) + 'px';
-            xMark.style.top = (clientY - rect.top) + 'px';
+            xMark.style.left = centerX + 'px'; 
+            xMark.style.top = centerY + 'px';
             gameContainer.appendChild(xMark);
             
             setTimeout(() => xMark.remove(), 500);
 
-            // Verhindern, dass man läuft, während man buddelt oder Schätze ansieht
-            if (isMoving || isDigging || showingResult || dugFields.size >= 3) return;
-
-            const tX = parseInt(e.target.dataset.x);
-            const tY = parseInt(e.target.dataset.y);
-
-            // Verhindern, dass man auf der Stelle läuft
-            if(tX === currentGridPos.x && tY === currentGridPos.y) return;
-
-            isMoving = true;
-            moveToTarget(tX, tY); 
+            isMoving = true; 
+            moveToTarget(tX, tY);
         });
     });
 </script>
