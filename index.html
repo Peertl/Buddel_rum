@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Buddel rum! (v0.23)</title>
+    <title>Buddel rum! (v0.24)</title>
     <style>
         body, html {
             margin: 0;
@@ -118,7 +118,7 @@
             transform: translate(var(--shift-x), var(--shift-y)) scale(var(--scale-correction)); 
             transform-origin: bottom center;
             display: block;
-            transition: transform 0.1s ease-in-out;
+            /* TRANSITION ENTFERNT: Jetzt gibt es harte, knackige Posen-Wechsel */
         }
 
         /* * --- CSS-PERFEKTIONS-KORREKTUREN --- * */
@@ -126,7 +126,7 @@
         /* Stehen */
         #schnabel[data-sprite="stehend"] { --shift-x: -50%; --scale-correction: 1; }
 
-        /* Rauchen (Exakt nach deinen Werten) */
+        /* Rauchen */
         #schnabel[data-sprite="rauchend_1"] { 
             --shift-x: -50%; 
             --shift-y: 2%; 
@@ -178,12 +178,11 @@
             cursor: pointer;
             box-shadow: 0 4px 6px rgba(0,0,0,0.3);
             text-shadow: 2px 2px 0px #5a3d17;
-            transition: all 0.2s ease;
+            transition: transform 0.1s ease;
         }
 
         #btn-buddeln:active:not(:disabled) {
             transform: scale(0.95);
-            box-shadow: 0 2px 3px rgba(0,0,0,0.3);
         }
 
         #btn-buddeln:disabled {
