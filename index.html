@@ -3,8 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Buddel rum! (v0.25 - Expedition Start)</title>
+    <title>Buddel rum! (v0.25)</title>
     <style>
+        /* Deaktiviert den blauen Klick-Schein auf mobilen Geräten */
+        * {
+            -webkit-tap-highlight-color: transparent;
+        }
+
         body, html {
             margin: 0;
             padding: 0;
@@ -82,6 +87,24 @@
             pointer-events: auto;
         }
 
+        /* --- Das Klick-X (Verblassend) --- */
+        .tap-x {
+            position: absolute;
+            color: #5a3d17;
+            font-size: 2.5rem;
+            font-weight: bold;
+            pointer-events: none;
+            transform: translate(-50%, -50%);
+            z-index: 999;
+            animation: fadeX 0.4s ease-out forwards;
+            text-shadow: 2px 2px 0px rgba(255, 255, 255, 0.4);
+        }
+
+        @keyframes fadeX {
+            0% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+            100% { opacity: 0; transform: translate(-50%, -50%) scale(1.5); }
+        }
+
         .loch-img {
             position: absolute;
             bottom: 25%; 
@@ -134,6 +157,8 @@
             max-width: 250px;
             z-index: 25;
             display: none;
+            font-weight: bold;
+            text-align: center;
         }
         #schnabel-speech:after {
             content: '';
@@ -148,16 +173,8 @@
 
         /* CSS-PERFEKTIONS-KORREKTUREN */
         #schnabel[data-sprite="stehend"] { --shift-x: -50%; --scale-correction: 1; }
-        #schnabel[data-sprite="rauchend_1"] { 
-            --shift-x: -50%; 
-            --shift-y: 2%; 
-            --scale-correction: 1.05; 
-        }
-        #schnabel[data-sprite="rauchend_2"] { 
-            --shift-x: -50.5%; 
-            --shift-y: 2%; 
-            --scale-correction: 1.05; 
-        }
+        #schnabel[data-sprite="rauchend_1"] { --shift-x: -50%; --shift-y: 2%; --scale-correction: 1.05; }
+        #schnabel[data-sprite="rauchend_2"] { --shift-x: -50.5%; --shift-y: 2%; --scale-correction: 1.05; }
         #schnabel[data-sprite="laufend_links_1"] { --shift-x: -50%; --scale-correction: 1; }
         #schnabel[data-sprite="laufend_links_2"] { --shift-x: -50%; --scale-correction: 1; }
         #schnabel[data-sprite="laufend_rechts_1"] { --shift-x: -50%; --scale-correction: 1; }
@@ -237,12 +254,13 @@
             width: 100%;
             text-align: left;
         }
-        #finds-list li { margin-bottom: 5px; }
+        #finds-list li { margin-bottom: 5px; display: flex; align-items: center; }
         #money-roll-summary {
             font-size: 1.5rem;
             display: flex;
             align-items: center;
             margin: 20px 0;
+            font-weight: bold;
         }
         #total-money-icon {
             width: 60px;
@@ -252,17 +270,8 @@
             margin-top: 30px;
         }
 
-        /* Währung Icons im Summary */
-        .money-roll-icon-summary {
-            width: 30px;
-            margin: 5px;
-        }
-
-        /* Niete Icon im Summary */
-        .niete-icon-summary {
-            width: 30px;
-            margin: 5px;
-        }
+        .money-roll-icon-summary { width: 30px; margin: 5px; }
+        .find-icon-summary { width: 35px; margin-right: 10px; }
 
         /* UI elements */
         #ui-layer {
@@ -344,7 +353,6 @@
     <div id="result-layer" class="overlay-layer">
         <div id="result-display">
             <img id="found-item-img" class="found-img" src="Niete.png" alt="Fundstück">
-            <p id="found-item-text">Text hier...</p>
             <button id="run-find-btn" class="run-btn">un!</button>
         </div>
     </div>
@@ -380,9 +388,10 @@
     ];
     let loadedImages = 0;
 
+    // Unsere beiden Basis-Items für diese Version
     const findItems = [
         { key: 'niete', img: 'Niete.png', text: '' },
-        { key: 'kanope', img: 'Kanope_Anubis_Stil-1.png', text: 'Die wird mir eine schöne Rolle Geld einbringen' }
+        { key: 'kanope', img: 'Kanope_Anubis_Stil-1.png', text: 'Die wird mir eine schöne\nRolle Geld einbringen!' }
     ];
 
     const fields = document.querySelectorAll('.field');
@@ -390,16 +399,16 @@
     const schnabelScaleWrapper = document.getElementById('schnabel-scale-wrapper'); 
     const schnabelImg = document.getElementById('schnabel-img');
     const gridEl = document.getElementById('grid');
+    const gameContainer = document.getElementById('game-container');
     const btnBuddeln = document.getElementById('btn-buddeln');
     const schnabelSpeech = document.getElementById('schnabel-speech');
     
-    // Result Layer elements
+    // Result Layer
     const resultLayer = document.getElementById('result-layer');
     const foundItemImg = document.getElementById('found-item-img');
-    const foundItemText = document.getElementById('found-item-text');
     const runFindBtn = document.getElementById('run-find-btn');
     
-    // Summary Layer elements
+    // Summary Layer
     const summaryLayer = document.getElementById('summary-layer');
     const findsList = document.getElementById('finds-list');
     const totalMoneyCount = document.getElementById('total-money-count');
@@ -416,6 +425,7 @@
     let currentGridPos = { x: 1, y: 0.5 }; 
     let dugFields = new Set(); 
     let inventory = [];
+    let gameItems = []; // Speichert die verdeckten Items der 12 Felder
 
     let idleTimer = null;
     let smokeInterval = null;
@@ -469,7 +479,7 @@
         dugFields.clear();
         inventory = [];
         
-        // Clear all Loch.png images
+        // Alle Löcher entfernen
         const lochImages = document.querySelectorAll('.loch-img');
         lochImages.forEach(img => img.remove());
         
@@ -484,21 +494,27 @@
         runFindBtn.style.display = 'none';
         restartBtn.style.display = 'none';
         btnBuddeln.style.display = 'block';
+        
+        // Items für das Raster generieren (4x Niete, 8x Kanope)
+        gameItems = ['niete', 'niete', 'niete', 'niete', 'kanope', 'kanope', 'kanope', 'kanope', 'kanope', 'kanope', 'kanope', 'kanope'];
+        // Zufällig mischen
+        gameItems.sort(() => Math.random() - 0.5); 
+        
         resetCharacter();
     }
 
     function initGame() {
         document.getElementById('loading-screen').style.display = 'none';
         document.getElementById('game-container').style.display = 'block';
-        btnBuddeln.disabled = true; // Disabled initially
-        runFindBtn.style.display = 'none'; // Ensure its hidden
+        btnBuddeln.disabled = true; 
+        runFindBtn.style.display = 'none'; 
 
-        resetGame(); // Ensure clean start
+        resetGame(); // Bereitet das erste Spiel vor
     }
 
     function getPixelCoordsFromGrid(gX, gY) {
         const rect = gridEl.getBoundingClientRect();
-        const container = document.getElementById('game-container').getBoundingClientRect();
+        const container = gameContainer.getBoundingClientRect();
         const cellWidth = rect.width / 3;
         const cellHeight = rect.height / 4;
         const pxX = (rect.left - container.left) + (gX - 0.5) * cellWidth;
@@ -581,57 +597,58 @@
     });
 
     function finishDigging() {
+        const fieldEl = document.querySelector(`.field[data-x="${currentGridPos.x}"][data-y="${currentGridPos.y}"]`);
+        const fieldIndex = parseInt(fieldEl.dataset.index); // 1 bis 12
         const fieldKey = `${currentGridPos.x}-${currentGridPos.y}`;
         dugFields.add(fieldKey); 
         
-        const fieldEl = document.querySelector(`.field[data-x="${currentGridPos.x}"][data-y="${currentGridPos.y}"]`);
         const pxCoords = getPixelCoordsFromGrid(currentGridPos.x, currentGridPos.y);
         const currentScale = updateSchnabelVisuals(pxCoords.x, pxCoords.y);
 
+        // Loch rendern
         const lochImg = document.createElement('img');
         lochImg.src = 'Loch.png';
         lochImg.className = 'loch-img';
         lochImg.style.transform = `translateX(-50%) scaleX(-${currentScale}) scaleY(${currentScale})`;
         fieldEl.appendChild(lochImg);
 
-        // Transition to Hurra pose, but don't reset.
+        // Hurra Pose
         setSchnabelImage('Buddel-Bursche-Hurra.png', 'hurra');
         showingResult = true;
         updateButtonState();
 
-        // Roll result
-        const findIndex = Math.floor(Math.random() * findItems.length);
-        const find = findItems[findIndex];
+        // Zufälliges Item (aus dem gemischten Array für dieses Feld) holen
+        const itemKey = gameItems[fieldIndex - 1];
+        const find = findItems.find(f => f.key === itemKey);
         inventory.push(find.key);
 
+        // Overlay aktualisieren
         foundItemImg.src = find.img;
-        foundItemText.innerText = find.text;
-        runFindBtn.style.display = 'block'; // Show confirmation btn
+        runFindBtn.style.display = 'block'; 
         
-        // Character speech bubble
+        // Schnabel Spruch
         if(find.text !== '') {
-            schnabelTalk(find.text); // User requested specific phrase for Kanope
+            schnabelTalk(find.text); 
         }
 
-        resultLayer.style.display = 'flex'; // Show result overlay
+        resultLayer.style.display = 'flex'; 
     }
 
     function showFinalSummary() {
-        resultLayer.style.display = 'none'; // Hide result screen
+        resultLayer.style.display = 'none'; 
         showingResult = false;
         
-        // Hide game-layer UI elements
         btnBuddeln.style.display = 'none';
         restartBtn.style.display = 'block';
 
-        findsList.innerHTML = ''; // Clear list
-        moneyRollsVisual.innerHTML = ''; // Clear money rolls
+        findsList.innerHTML = ''; 
+        moneyRollsVisual.innerHTML = ''; 
         
         let moneyRollsCount = 0;
         inventory.forEach((itemKey, index) => {
             const item = findItems.find(f => f.key === itemKey);
             const li = document.createElement('li');
-            li.innerHTML = `Fund ${index + 1}: <img src="${item.img}" class="${itemKey}-icon-summary" /> ${itemKey === 'niete' ? 'Niete' : 'Kanope'}`;
+            li.innerHTML = `Fund ${index + 1}: <img src="${item.img}" class="find-icon-summary" /> ${itemKey === 'niete' ? 'Niete' : 'Kanope'}`;
             findsList.appendChild(li);
             
             if(itemKey === 'kanope') {
@@ -641,7 +658,7 @@
 
         totalMoneyCount.innerText = moneyRollsCount;
         
-        // Create money roll icons
+        // Erzeuge Geldrollen-Bilder
         for(let i = 0; i < moneyRollsCount; i++) {
             const img = document.createElement('img');
             img.src = 'Währung.png';
@@ -649,27 +666,28 @@
             moneyRollsVisual.appendChild(img);
         }
 
-        summaryLayer.style.display = 'flex'; // Show summary overlay
+        summaryLayer.style.display = 'flex'; 
     }
 
-    // Confirmation "un!" button inside result layer
+    // Der "un!" Button im Fund-Layer
     runFindBtn.addEventListener('click', () => {
         resultLayer.style.display = 'none';
         showingResult = false;
+        isDigging = false; // BUG BEHOBEN! Schnabel ist nicht mehr blockiert!
         updateButtonState();
-        schnabelTalk('', 0); // Hide speech
+        schnabelTalk('', 0); // Sprechblase ausblenden
 
         if (dugFields.size === 3) {
-            // Game end, show summary
+            // Spiel vorbei, zeige Zusammenfassung
             showFinalSummary();
         } else {
-            // Stand back up and start idle timer
+            // Wieder aufstehen und bereit machen
             setSchnabelImage('Schnabel_stehend.png', 'stehend');
             startIdleTimer();
         }
     });
 
-    // Final screen restart button
+    // Neustart-Button im Summary-Layer
     restartBtn.addEventListener('click', () => {
         resetGame();
     });
@@ -758,6 +776,23 @@
 
     fields.forEach(field => {
         field.addEventListener('click', (e) => {
+            // Das X beim Klick generieren
+            const xMark = document.createElement('div');
+            xMark.innerText = 'X';
+            xMark.className = 'tap-x';
+            
+            // X-Position auf dem Screen berechnen
+            const rect = gameContainer.getBoundingClientRect();
+            const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+            const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+            xMark.style.left = (clientX - rect.left) + 'px';
+            xMark.style.top = (clientY - rect.top) + 'px';
+            gameContainer.appendChild(xMark);
+            
+            // X nach kurzer Zeit wieder löschen
+            setTimeout(() => xMark.remove(), 400);
+
+            // Bewegung nur erlauben, wenn bereit
             if (isMoving || isDigging || showingResult || dugFields.size === 3) return;
 
             const tX = parseInt(e.target.dataset.x);
