@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Buddel rum! (v0.30)</title>
+    <title>Buddel rum! (v0.31)</title>
     <style>
+        /* Deaktiviert den blauen Klick-Schein auf mobilen Geräten */
         * { -webkit-tap-highlight-color: transparent; }
 
         body, html {
@@ -62,11 +63,11 @@
             position: absolute; bottom: 25%; left: 50%;
             width: 110px; transform-origin: bottom center;
             pointer-events: none; 
-            z-index: 15; /* Hinter Schnabel (20) */
+            z-index: 15; /* Hinter Schnabel (Z-Index 20) */
         }
         /* Klasse für das *aktuelle* Loch: Eine Ebene vor Schnabel */
         .loch-img.latest-dug {
-            z-index: 25; /* Vor Schnabel (20) */
+            z-index: 25; /* Vor Schnabel */
         }
 
         #schnabel { position: absolute; width: 0; height: 0; z-index: 20; pointer-events: none; --shift-x: -50%; --shift-y: 0%; --scale-correction: 1; }
@@ -84,7 +85,7 @@
         #schnabel[data-sprite^="laufend"] { --shift-x: -50%; --scale-correction: 1; }
         #schnabel[data-sprite^="laufend_zurück"] { --scale-correction: 0.96; }
         
-        /* Buddeln, Jubeln, Kritzeln, Halten (Sitzend) - Alle gleich groß */
+        /* Buddeln, Jubeln, Kritzeln, Halten (Sitzend) - Alle gleich groß skaliert */
         #schnabel[data-sprite^="buddelnd"], #schnabel[data-sprite="hurra"] { --scale-correction: 0.80; }
         #schnabel[data-sprite="kritzelnd"], #schnabel[data-sprite="haltend"] { --scale-correction: 0.80; }
 
@@ -136,12 +137,10 @@
             max-width: 85%; max-height: 90%; overflow-y: auto;
         }
 
-        /* Summary List */
         #finds-list { list-style: none; padding: 0; margin: 15px 0; width: 100%; }
         #finds-list li { display: flex; align-items: center; justify-content: center; margin-bottom: 8px; font-size: 1.2rem; font-weight: bold;}
         .list-icon { width: 40px; height: 40px; object-fit: contain; margin-right: 10px; }
 
-        /* Total Summary */
         .summary-header { display: flex; align-items: center; margin-top: 10px; border-top: 3px dashed #8b5a2b; padding-top: 15px; }
         .total-currency-img { width: 55px; margin-right: 15px; }
         .summary-title { font-size: 1.4rem; font-weight: bold; }
@@ -216,7 +215,7 @@
             </div>
             <div id="final-sum-text" class="total-amount-text">0 Rollen</div>
             
-            <button id="restart-btn" class="run-btn">Neue Expedition starten</button>
+            <button id="restart-btn" class="run-btn" style="background-color: #5a3d17;">Neue Expedition starten</button>
         </div>
     </div>
 </div>
@@ -228,18 +227,20 @@
         'Schnabel_laufend_zurück_links_2.png', 'Schnabel_laufend_zurück_rechts_1.png', 'Schnabel_laufend_zurück_rechts_2.png',
         'Schnabel_rauchend_1.png', 'Schnabel_rauchend_2.png', 'Buddel-Bursche_buddelnd-1.png', 'Buddel-Bursche_buddelnd-2.png',
         'Buddel-Bursche-Hurra.png', 'Loch.png', 'Währung.png', 'Kanope_Anubis_Stil-1.png', 'Niete.png',
-        'image_10.png', 'image_9.png', 'image_7.png', 'image_8.png' // Pergament & Neue Posen
+        'Buddel-Bursche_kritzelnd.png', 'Buddel-Bursche_Penoi.png', 'Pergament_Penoi.png', 'Pergament.png' // Deine neuen Original-Dateinamen!
     ];
     let loadedImages = 0;
     
-    // Item-Datenbank (inklusive Pergament-Daten)
+    // Item-Datenbank (inklusive deiner neuen Original-Dateinamen)
     const findItems = {
         'niete': { img: 'Niete.png', text: '', value: 0 },
-        'kanope': { img: 'Kanope_Anubis_Stil-1.png', text: '"Die wird mir eine schöne Rolle Geld einbringen"', value: 1 },
-        'pergament': { img: 'image_10.png', text: '"Molto! Aber so bekomme ich dafür ja höchstens eine Rolle"', value: 0, buttonText: "Aufwerten" },
-        'pergament-penoi': { img: 'image_9.png', text: '"Besser!"', value: 3, buttonText: "un!" }
+        'kanope': { img: 'Kanope_Anubis_Stil-1.png', text: '"Die wird mir eine schöne Rolle Geld einbringen!"', value: 1 },
+        'pergament': { img: 'Pergament.png', text: '"Molto! Aber so bekomme ich dafür ja höchstens eine Rolle"', value: 0, buttonText: "Aufwerten" },
+        'pergament-penoi': { img: 'Pergament_Penoi.png', text: '"Besser!"', value: 3, buttonText: "un!" }
     };
 
+    // DOM Elemente (Die fehlende "fields" Zeile ist repariert!)
+    const fields = document.querySelectorAll('.field');
     const schnabel = document.getElementById('schnabel');
     const schnabelImg = document.getElementById('schnabel-img');
     const schnabelScaleWrapper = document.getElementById('schnabel-scale-wrapper');
@@ -247,13 +248,11 @@
     const gameContainer = document.getElementById('game-container');
     const btnBuddeln = document.getElementById('btn-buddeln');
     
-    // Result Layer
     const resultLayer = document.getElementById('result-layer');
     const foundItemImg = document.getElementById('found-item-img');
     const foundQuote = document.getElementById('found-quote');
     const confirmFindBtn = document.getElementById('confirm-find-btn');
     
-    // Summary Layer
     const summaryLayer = document.getElementById('summary-layer');
     const findsList = document.getElementById('finds-list');
     const finalSumText = document.getElementById('final-sum-text');
@@ -264,8 +263,7 @@
     let currentGridPos = { x: 1, y: 0.5 }, dugFields = new Set(), inventory = [], gameItems = [];
     let idleTimer = null, smokeInterval = null, digActionInterval = null;
     
-    // Ebenen-Logik: Variable für das *aktuelle* Loch-Element
-    let latestDugLochElement = null;
+    let latestDugLochElement = null; // Speichert das Loch, vor dem Schnabel gerade sitzt
 
     function imageLoaded() {
         loadedImages++;
@@ -291,21 +289,23 @@
         inventory = [];
         dugFields.clear();
         
-        // Alle Löcher entfernen und Ebenen-Variable resetten
+        // Alle Löcher entfernen
         document.querySelectorAll('.loch-img').forEach(img => img.remove());
         latestDugLochElement = null;
         
-        // Loot verteilen: 1 Pergament, 4 Nieten, 7 Kanopen (12 Felder)
-        gameItems = ['pergament'].concat(Array(4).fill('niete')).concat(Array(7).fill('kanope')).sort(() => Math.random() - 0.5);
+        // Loot verteilen: 1 Pergament, 4 Nieten, 7 Kanopen
+        gameItems = ['pergament'].concat(Array(4).fill('niete')).concat(Array(7).fill('kanope'));
+        gameItems.sort(() => Math.random() - 0.5); 
         
         currentGridPos = { x: 1, y: 0.5 };
         isDigging = false; isMoving = false; showingResult = false;
+        
         setSchnabelImage('Schnabel_stehend.png', 'stehend');
+        stopAllTimers();
         
         const coords = getPixelCoordsFromGrid(1, 0.5);
         updateSchnabelVisuals(coords.x, coords.y);
         updateButtonState();
-        stopAllTimers();
     }
 
     function getPixelCoordsFromGrid(gX, gY) {
@@ -320,7 +320,7 @@
         const yStart = getPixelCoordsFromGrid(1, 0.5).y, yBottom = getPixelCoordsFromGrid(1, 4.0).y;
         const scale = 0.50 + (Math.max(0, Math.min(1, (pxY - yStart) / (yBottom - yStart))) * 0.50);
         schnabel.style.left = pxX + 'px'; schnabel.style.top = pxY + 'px';
-        schnabelScaleWrapper.style.transform = `scale(${scale})`;
+        schnabelScaleWrapper.style.transform = `scale(${Math.max(0.1, scale)})`;
         return scale;
     }
 
@@ -328,8 +328,9 @@
 
     function startIdleTimer() {
         stopAllTimers();
-        // Verhindert IdleTimer/Rauchen während Kritzelns
+        // Kein Rauchen während Schnabel ein Fund-Fenster ansieht oder kritzelnd/haltend am Boden sitzt
         if (currentGridPos.y === 0.5 || showingResult || schnabel.dataset.sprite === 'kritzelnd' || schnabel.dataset.sprite === 'haltend') return;
+        
         idleTimer = setTimeout(() => {
             let step = 1;
             setSchnabelImage(`Schnabel_rauchend_${step}.png`, `rauchend_${step}`);
@@ -349,6 +350,7 @@
         isDigging = true; updateButtonState(); stopAllTimers();
         let step = 1, elapsed = 0;
         setSchnabelImage(`Buddel-Bursche_buddelnd-${step}.png`, `buddelnd_${step}`);
+        
         digActionInterval = setInterval(() => {
             step = step === 1 ? 2 : 1; setSchnabelImage(`Buddel-Bursche_buddelnd-${step}.png`, `buddelnd_${step}`);
             elapsed += 500;
@@ -359,13 +361,13 @@
     function finishDigging() {
         const fieldEl = document.querySelector(`.field[data-x="${currentGridPos.x}"][data-y="${currentGridPos.y}"]`);
         dugFields.add(`${currentGridPos.x}-${currentGridPos.y}`);
-        const currentScale = updateSchnabelVisuals(getPixelCoordsFromGrid(currentGridPos.x, currentGridPos.y).x, getPixelCoordsFromGrid(currentGridPos.x, currentGridPos.y).y);
+        const coords = getPixelCoordsFromGrid(currentGridPos.x, currentGridPos.y);
+        const currentScale = updateSchnabelVisuals(coords.x, coords.y);
         
+        // Loch rendern und als neuestes (vorne liegend) markieren
         const loch = document.createElement('img');
-        loch.src = 'Loch.png'; loch.className = 'loch-img';
-        
-        // Ebenen-Logik: Das *aktuelle* Loch wird als neuestes markiert und wandert *vor* Schnabel
-        loch.classList.add('latest-dug');
+        loch.src = 'Loch.png'; 
+        loch.className = 'loch-img latest-dug';
         latestDugLochElement = loch;
         
         loch.style.transform = `translateX(-50%) scaleX(-${currentScale}) scaleY(${currentScale})`;
@@ -376,113 +378,126 @@
 
         const itemKey = gameItems[parseInt(fieldEl.dataset.index) - 1];
         const item = findItems[itemKey];
-        // Das Pergament zählt nicht mit in die Rollen-Summe, Pergament-Penoi zählt.
         inventory.push(itemKey);
 
-        document.getElementById('found-item-img').src = item.img;
-        document.getElementById('found-quote').innerText = item.text;
-        confirmFindBtn.innerText = item.buttonText || "un!"; // Passe Button-Text an (Aufwerten oder un!)
+        foundItemImg.src = item.img;
+        foundQuote.innerText = item.text;
+        confirmFindBtn.innerText = item.buttonText || "un!"; 
         
-        // 1 Sekunde Verzögerung für Hurra-Animation
+        // 1 Sekunde Verzögerung für die Hurra-Animation!
         setTimeout(() => {
-            document.getElementById('result-layer').style.display = 'flex';
+            resultLayer.style.display = 'flex';
         }, 1000);
     }
 
-    // HANDLER FÜR AUFWERTEN/un! BUTTON
     confirmFindBtn.addEventListener('click', () => {
-        document.getElementById('result-layer').style.display = 'none';
+        resultLayer.style.display = 'none';
         
-        // ABLAUF AUFWERTEN (PERGAMENT)
+        // Logik: "Aufwerten" gedrückt
         if(confirmFindBtn.innerText === "Aufwerten") {
-            schnabelTalk('', 0); // Spruch-Text im Fund-Window ausblenden
-
-            // Pose: KritzelPose (sitzt kritzelnd, image_7.png, 2s)
-            setSchnabelImage('image_7.png', 'kritzelnd'); 
+            foundQuote.innerText = ""; // Spruch löschen
+            setSchnabelImage('Buddel-Bursche_kritzelnd.png', 'kritzelnd'); 
             
-            // Loch-Ebene bleibt *vor* Schnabel (latest-dug Klasse ist noch da)
-
             setTimeout(() => {
-                // Pose: HaltPose (Buddel-Bursche-Penoi Pose, image_8.png, 1s)
-                setSchnabelImage('image_8.png', 'haltend');
+                setSchnabelImage('Buddel-Bursche_Penoi.png', 'haltend');
                 
                 setTimeout(() => {
-                    // Fund-Window-Anzeige für Pergament-Penoi (3 Rollen)
-                    showingResult = true; // Verhindert IdleTimer/Rauchen
-                    confirmFindBtn.innerText = "un!"; // Button heißt wieder "un!"
+                    showingResult = true; 
+                    confirmFindBtn.innerText = "un!"; 
                     
-                    document.getElementById('found-item-img').src = findItems['pergament-penoi'].img;
-                    document.getElementById('found-quote').innerText = findItems['pergament-penoi'].text;
-                    document.getElementById('result-layer').style.display = 'flex';
+                    foundItemImg.src = findItems['pergament-penoi'].img;
+                    foundQuote.innerText = findItems['pergament-penoi'].text;
+                    resultLayer.style.display = 'flex';
                     
-                    // Pergament-Penoi zählt mit 3 Rollen!
                     inventory.push('pergament-penoi');
-                    
                 }, 1000);
             }, 2000);
 
         } else {
-            // ABLAUF BESTÄTIGEN (NIETE, KANOPE, PERGAMENT-PENOI)
+            // Logik: "un!" gedrückt
             showingResult = false; isDigging = false;
+            
+            // Loch fällt in den Hintergrund
+            if(latestDugLochElement) {
+                latestDugLochElement.classList.remove('latest-dug');
+            }
             
             if (dugFields.size >= 3) {
                 showSummary();
             } else {
-                // Ebenen-Logik: Das *aktuelle* Loch wandert *hinter* Schnabel
-                if(latestDugLochElement) {
-                    latestDugLochElement.classList.remove('latest-dug');
-                }
-                
                 setSchnabelImage('Schnabel_stehend.png', 'stehend');
                 updateButtonState(); startIdleTimer();
             }
         }
     });
 
-    // Sprechblasensymbol für Fund-Texts
-    const schnabelSpeech = document.getElementById('schnabel-speech');
-    function schnabelTalk(text, duration) {
-        if(text === '') { schnabelSpeech.style.display = 'none'; return; }
-        schnabelSpeech.innerText = text;
-        schnabelSpeech.style.display = 'block';
-        if(duration) setTimeout(() => schnabelSpeech.style.display = 'none', duration);
-    }
-
     function showSummary() {
-        const list = document.getElementById('finds-list');
-        list.innerHTML = '';
+        findsList.innerHTML = '';
         let total = 0;
         
         inventory.forEach(key => {
-            const item = findItems[key];
-            // Ignoriere das ursprüngliche Pergament (0 Rollen) in der Liste
+            // Pergament roh ignorieren, wir zählen nur die verwandelte Form
             if(key === 'pergament') return;
             
+            const item = findItems[key];
             total += item.value;
             const li = document.createElement('li');
             const rollText = item.value === 1 ? "1 Rolle" : `${item.value} Rollen`;
             li.innerHTML = `<img src="${item.img}" class="list-icon"> <span>${rollText}</span>`;
-            list.appendChild(li);
+            findsList.appendChild(li);
         });
-        document.getElementById('final-sum-text').innerText = total === 1 ? "1 Rolle" : `${total} Rollen`;
-        document.getElementById('summary-layer').style.display = 'flex';
+        
+        finalSumText.innerText = total === 1 ? "1 Rolle" : `${total} Rollen`;
+        summaryLayer.style.display = 'flex';
         btnBuddeln.style.display = 'none';
     }
 
-    document.getElementById('restart-btn').addEventListener('click', resetGame);
+    restartBtn.addEventListener('click', resetGame);
+
+    function startWalkAnimation(fromX, fromY, toX, toY) {
+        clearInterval(walkInterval);
+        
+        currentDirection = "";
+        let dx = toX - fromX;
+        let dy = toY - fromY;
+
+        if (Math.abs(dx) < 1) { 
+            if (dy < 0) currentDirection = "zurück_rechts"; 
+            else currentDirection = "rechts";               
+        } else if (dx < 0) {
+            if (dy < 0) currentDirection = "zurück_links";  
+            else currentDirection = "links";                
+        } else {
+            if (dy < 0) currentDirection = "zurück_rechts"; 
+            else currentDirection = "rechts";               
+        }
+
+        walkStep = 1;
+        setSchnabelImage(`Schnabel_laufend_${currentDirection}_${walkStep}.png`, `laufend_${currentDirection}_${walkStep}`);
+
+        walkInterval = setInterval(() => {
+            walkStep = walkStep === 1 ? 2 : 1;
+            setSchnabelImage(`Schnabel_laufend_${currentDirection}_${walkStep}.png`, `laufend_${currentDirection}_${walkStep}`);
+        }, 180); 
+    }
+
+    function stopWalkAnimation() {
+        clearInterval(walkInterval);
+        setSchnabelImage('Schnabel_stehend.png', 'stehend');
+        walkStep = 1;
+        currentDirection = null; 
+    }
 
     function moveToTarget(tX, tY) {
         stopAllTimers(); updateButtonState();
         const startCoords = getPixelCoordsFromGrid(currentGridPos.x, currentGridPos.y), targetCoords = getPixelCoordsFromGrid(tX, tY);
         
-        currentDirection = (tX < currentGridPos.x) ? (tY < currentGridPos.y ? "zurück_links" : "links") : (tY < currentGridPos.y ? "zurück_rechts" : "rechts");
-        if (Math.abs(tX - currentGridPos.x) < 0.1) currentDirection = (tY < currentGridPos.y) ? "zurück_rechts" : "rechts";
-        
-        walkStep = 1; setSchnabelImage(`Schnabel_laufend_${currentDirection}_${walkStep}.png`, `laufend_${currentDirection}_${walkStep}`);
-        walkInterval = setInterval(() => { walkStep = walkStep === 1 ? 2 : 1; setSchnabelImage(`Schnabel_laufend_${currentDirection}_${walkStep}.png`, `laufend_${currentDirection}_${walkStep}`); }, 180);
+        startWalkAnimation(startCoords.x, startCoords.y, targetCoords.x, targetCoords.y);
 
         const dist = Math.sqrt(Math.pow(targetCoords.x - startCoords.x, 2) + Math.pow(targetCoords.y - startCoords.y, 2));
-        const duration = (dist * 6) / ((updateSchnabelVisuals(startCoords.x, startCoords.y) + updateSchnabelVisuals(targetCoords.x, targetCoords.y)) / 2);
+        const avgScaleBase = (updateSchnabelVisuals(startCoords.x, startCoords.y) + updateSchnabelVisuals(targetCoords.x, targetCoords.y)) / 2;
+        const duration = (dist * 6) / avgScaleBase; 
+        
         let startTime = null;
 
         function animate(time) {
@@ -499,30 +514,36 @@
         requestAnimationFrame(animate);
     }
 
-    fields.forEach(f => f.addEventListener('click', (e) => {
-        if (isMoving || isDigging || showingResult || dugFields.size >= 3 || schnabel.dataset.sprite === 'kritzelnd' || schnabel.dataset.sprite === 'haltend') return;
-        
-        // PERSPEKTIVISCHES X-MARKERUNG ZENTRIERT
-        const rect = f.getBoundingClientRect();
-        const containerRect = gameContainer.getBoundingClientRect();
-        const centerX = (rect.left - containerRect.left) + rect.width / 2;
-        const centerY = (rect.top - containerRect.top) + rect.height / 2;
-        
-        const xMark = document.createElement('div');
-        xMark.className = 'tap-x'; xMark.innerText = 'X';
-        xMark.style.left = centerX + 'px'; xMark.style.top = centerY + 'px';
-        gameContainer.appendChild(xMark);
-        setTimeout(() => xMark.remove(), 500);
+    fields.forEach(field => {
+        field.addEventListener('click', (e) => {
+            // Das X wird sofort und zuverlässig in der Feldmitte erzeugt
+            const xMark = document.createElement('div');
+            xMark.className = 'tap-x'; xMark.innerText = 'X';
+            
+            const rect = field.getBoundingClientRect();
+            const containerRect = gameContainer.getBoundingClientRect();
+            const centerX = (rect.left - containerRect.left) + rect.width / 2;
+            const centerY = (rect.top - containerRect.top) + rect.height / 2;
+            
+            xMark.style.left = centerX + 'px'; 
+            xMark.style.top = centerY + 'px';
+            gameContainer.appendChild(xMark);
+            
+            setTimeout(() => xMark.remove(), 500);
 
-        const tx = parseInt(f.dataset.x), ty = parseInt(f.dataset.y);
-        if (tx === currentGridPos.x && ty === currentGridPos.y) return;
-        isMoving = true; moveToTarget(tx, ty);
-    }));
+            // Bewegung nur ausführen, wenn er bereit ist
+            if (isMoving || isDigging || showingResult || dugFields.size >= 3 || schnabel.dataset.sprite === 'kritzelnd' || schnabel.dataset.sprite === 'haltend') return;
+
+            const tX = parseInt(field.dataset.x);
+            const tY = parseInt(field.dataset.y);
+
+            if(tX === currentGridPos.x && tY === currentGridPos.y) return;
+
+            isMoving = true; 
+            moveToTarget(tX, tY);
+        });
+    });
 </script>
-
-<div id="grid-speech-container" style="position: absolute; width: 0; height: 0; z-index: 25; pointer-events: none;">
-    <div id="schnabel-speech" class="grid-speech-bubble" style="bottom: 110px; left: 50%; transform: translateX(-50%); display: none; background: white; border: 4px solid #5a3d17; border-radius: 15px; padding: 10px 15px; width: max-content; max-width: 250px; font-weight: bold; text-align: center;">bubble</div>
-</div>
 
 </body>
 </html>
