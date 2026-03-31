@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Buddel rum! (v0.33 - Herbertep Update)</title>
+    <title>Buddel rum! (v0.34)</title>
     <style>
         /* Deaktiviert den blauen Klick-Schein auf mobilen Geräten */
         * { -webkit-tap-highlight-color: transparent; }
@@ -58,10 +58,13 @@
             100% { opacity: 0; transform: translate(-50%, -50%) rotateX(60deg) scale(1.3); }
         }
 
-        /* EBENEN-LOGIK DES LOCHS */
+        /* EBENEN-LOGIK & POSITION DES LOCHS (v0.34 angepasst) */
         .loch-img {
-            position: absolute; bottom: 25%; left: 50%;
-            width: 110px; transform-origin: bottom center;
+            position: absolute; 
+            bottom: 18%; /* Weiter nach unten (vorher 25%) */
+            left: 45%;   /* Weiter nach links (vorher 50%) */
+            width: 90px; /* Etwas kleiner (vorher 110px) */
+            transform-origin: bottom center;
             pointer-events: none; 
             z-index: 15; /* Hinter Schnabel (Z-Index 20) */
         }
@@ -233,7 +236,7 @@
     ];
     let loadedImages = 0;
     
-    // Item-Datenbank (inklusive ALLER Schätze)
+    // Item-Datenbank (inklusive aller neuen Schätze & Niete & Pergament-Prozess)
     const findItems = {
         'niete': { img: 'Niete.png', text: '', value: 0 },
         'kanope': { img: 'Kanope_Anubis_Stil-1.png', text: '"Die wird mir eine schöne Rolle Geld einbringen!"', value: 1 },
@@ -302,7 +305,7 @@
         document.querySelectorAll('.loch-img').forEach(img => img.remove());
         latestDugLochElement = null;
         
-        // POOL ALLER SCHÄTZE (ohne Niete und Pergament, die behandeln wir extra)
+        // POOL ALLER SCHÄTZE
         let treasurePool = [
             'kanope', 'kanope_c3po', 'kanope_dino', 'relief_aliens', 'no_fritteuse', 
             'rosetta', 'relief_herbertep', 'kanope_herbertep', 'mumie_herbertep', 'dinosaurier'
