@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Buddel rum! (v0.34)</title>
+    <title>Buddel rum! (v0.35)</title>
     <style>
         /* Deaktiviert den blauen Klick-Schein auf mobilen Geräten */
         * { -webkit-tap-highlight-color: transparent; }
@@ -58,12 +58,12 @@
             100% { opacity: 0; transform: translate(-50%, -50%) rotateX(60deg) scale(1.3); }
         }
 
-        /* EBENEN-LOGIK & POSITION DES LOCHS (v0.34 angepasst) */
+        /* EBENEN-LOGIK & POSITION DES LOCHS (v0.35 angepasst) */
         .loch-img {
             position: absolute; 
-            bottom: 18%; /* Weiter nach unten (vorher 25%) */
-            left: 45%;   /* Weiter nach links (vorher 50%) */
-            width: 90px; /* Etwas kleiner (vorher 110px) */
+            bottom: 22%; /* Wieder etwas höher (vorher 18%) */
+            left: 45%;   /* Nach links verschoben */
+            width: 90px; /* Etwas kleiner */
             transform-origin: bottom center;
             pointer-events: none; 
             z-index: 15; /* Hinter Schnabel (Z-Index 20) */
@@ -236,7 +236,7 @@
     ];
     let loadedImages = 0;
     
-    // Item-Datenbank (inklusive aller neuen Schätze & Niete & Pergament-Prozess)
+    // Item-Datenbank
     const findItems = {
         'niete': { img: 'Niete.png', text: '', value: 0 },
         'kanope': { img: 'Kanope_Anubis_Stil-1.png', text: '"Die wird mir eine schöne Rolle Geld einbringen!"', value: 1 },
@@ -388,7 +388,7 @@
         const coords = getPixelCoordsFromGrid(currentGridPos.x, currentGridPos.y);
         const currentScale = updateSchnabelVisuals(coords.x, coords.y);
         
-        // Loch rendern (Loch_neu.png OHNE Spiegelung)
+        // Loch rendern (Loch_neu.png)
         const loch = document.createElement('img');
         loch.src = 'Loch_neu.png'; 
         loch.className = 'loch-img latest-dug';
