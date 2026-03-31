@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Buddel rum! (v0.41)</title>
+    <title>Buddel rum! (v0.42 - Dynamic Movement)</title>
     <style>
         /* Deaktiviert den blauen Klick-Schein auf mobilen Geräten */
         * { -webkit-tap-highlight-color: transparent; }
@@ -111,7 +111,6 @@
             flex-direction: column; color: #5a3d17; text-align: center;
         }
 
-        /* Gemeinsame Klasse für alle Fund/Summary Panels */
         .overlay-panel {
             background-color: #d4a351; border: 8px solid #8b5a2b;
             border-radius: 20px; padding: 30px 20px; display: flex;
@@ -161,29 +160,18 @@
             font-weight: bold; color: #fff; background-color: #8b5a2b;
             border: 4px solid #5a3d17; border-radius: 15px;
             padding: 10px 40px; cursor: pointer; z-index: 30; text-shadow: 2px 2px 0px #5a3d17;
+            display: none; /* Am Anfang ausgeblendet */
         }
         #btn-buddeln:disabled { background-color: #b09a83; color: #e0d6cb; cursor: not-allowed; }
 
         /* Anleitung Overlay Panel */
-        #instructions-layer {
-            z-index: 9500; 
-        }
-        #instructions-panel {
-            text-align: left; 
-            justify-content: space-around; 
-        }
+        #instructions-layer { z-index: 9500; }
+        #instructions-panel { text-align: left; justify-content: space-around; }
         
         #instructions-title { font-size: 2.2rem; font-weight: bold; margin-bottom: 20px; text-decoration: underline; color: #5a3d17;}
-        #instructions-list { 
-            list-style: none; padding: 0; margin: 0 0 30px 0; width: 90%; 
-            font-size: 1.2rem; color: #5a3d17;
-        }
-        #instructions-list li {
-            margin-bottom: 15px; position: relative; padding-left: 25px; line-height: 1.4;
-        }
-        #instructions-list li::before {
-            content: '𓂀'; position: absolute; left: 0; top: 0; color: #8b5a2b; font-size: 1rem;
-        }
+        #instructions-list { list-style: none; padding: 0; margin: 0 0 30px 0; width: 90%; font-size: 1.2rem; color: #5a3d17; }
+        #instructions-list li { margin-bottom: 15px; position: relative; padding-left: 25px; line-height: 1.4; }
+        #instructions-list li::before { content: '𓂀'; position: absolute; left: 0; top: 0; color: #8b5a2b; font-size: 1rem; }
 
     </style>
 </head>
@@ -316,8 +304,10 @@
 
     let isMoving = false, isDigging = false, showingResult = false;
     let walkStep = 1, walkInterval = null, currentDirection = null;
-    let currentGridPos = { x: 1, y: 0.5 }, dugFields = new Set(), inventory = [], gameItems = [];
+    let currentGridPos = { x: 1, y: 0.5 }, targetGridPos = { x: 1, y: 0.5 };
+    let dugFields = new Set(), inventory = [], gameItems = [];
     let idleTimer = null, smokeInterval = null, digActionInterval = null;
+    let moveAnimFrame = null; // Für das Abbrechen der Laufen-Animation
     
     let latestDugLochElement = null; 
 
@@ -359,7 +349,7 @@
     function resetGame() {
         document.querySelectorAll('.overlay-layer').forEach(l => l.style.display = 'none');
         startScreen.style.display = 'none'; 
-        btnBuddeln.style.display = 'block';
+        
         inventory = [];
         dugFields.clear();
         
@@ -376,14 +366,16 @@
         gameItems.sort(() => Math.random() - 0.5); 
         
         currentGridPos = { x: 1, y: 0.5 };
+        targetGridPos = { x: 1, y: 0.5 };
         isDigging = false; isMoving = false; showingResult = false;
+        
+        if (moveAnimFrame) { cancelAnimationFrame(moveAnimFrame); moveAnimFrame = null; }
+        
         setSchnabelImage('Schnabel_stehend.png', 'stehend');
         
         const coords = getPixelCoordsFromGrid(1, 0.5);
         updateSchnabelVisuals(coords.x, coords.y);
         updateButtonState();
-        
-        // Schnabel faengt auch am Startpunkt nach 3 Sek an zu rauchen
         startIdleTimer();
     }
 
@@ -407,7 +399,6 @@
 
     function startIdleTimer() {
         stopAllTimers();
-        // Keine Idle-Sperre mehr fuer y=0.5 -> Schnabel raucht jetzt auch am Start!
         if (showingResult || schnabel.dataset.sprite === 'kritzelnd' || schnabel.dataset.sprite === 'haltend') return;
         
         idleTimer = setTimeout(() => {
@@ -422,7 +413,20 @@
 
     function updateButtonState() {
         const key = `${currentGridPos.x}-${currentGridPos.y}`;
-        btnBuddeln.disabled = (isMoving || isDigging || showingResult || currentGridPos.y === 0.5 || dugFields.has(key) || dugFields.size >= 3);
+        const isStart = (currentGridPos.y === 0.5);
+
+        // Blende Button am Start aus
+        if (isStart || dugFields.size >= 3) {
+            btnBuddeln.style.display = 'none';
+        } else {
+            btnBuddeln.style.display = 'block';
+        }
+
+        if (!isMoving && !isDigging && !showingResult && !isStart && !dugFields.has(key) && dugFields.size < 3) {
+            btnBuddeln.disabled = false;
+        } else {
+            btnBuddeln.disabled = true;
+        }
     }
 
     btnBuddeln.addEventListener('click', () => {
@@ -529,14 +533,34 @@
 
     restartBtn.addEventListener('click', resetGame);
 
-    function startWalkAnimation(fromX, fromY, toX, toY) {
-        clearInterval(walkInterval);
+    function moveToTarget(tX, tY) {
+        stopAllTimers(); 
+        isMoving = true;
+        updateButtonState(); 
         
-        currentDirection = "";
-        let dx = toX - fromX;
-        let dy = toY - fromY;
+        if (moveAnimFrame) {
+            cancelAnimationFrame(moveAnimFrame);
+        }
 
-        if (Math.abs(dx) < 1) { 
+        // Finde die aktuelle physische Position auf dem Bildschirm (falls er schon lief)
+        let startPxX, startPxY;
+        if (schnabel.style.left && schnabel.style.top) {
+            startPxX = parseFloat(schnabel.style.left);
+            startPxY = parseFloat(schnabel.style.top);
+        } else {
+            const startCoords = getPixelCoordsFromGrid(currentGridPos.x, currentGridPos.y);
+            startPxX = startCoords.x;
+            startPxY = startCoords.y;
+        }
+
+        const targetCoords = getPixelCoordsFromGrid(tX, tY);
+        const dx = targetCoords.x - startPxX;
+        const dy = targetCoords.y - startPxY;
+
+        clearInterval(walkInterval);
+        currentDirection = "";
+        
+        if (Math.abs(dx) < 5) { 
             if (dy < 0) currentDirection = "zurück_rechts"; 
             else currentDirection = "rechts";               
         } else if (dx < 0) {
@@ -554,23 +578,11 @@
             walkStep = walkStep === 1 ? 2 : 1;
             setSchnabelImage(`Schnabel_laufend_${currentDirection}_${walkStep}.png`, `laufend_${currentDirection}_${walkStep}`);
         }, 180); 
-    }
 
-    function stopWalkAnimation() {
-        clearInterval(walkInterval);
-        setSchnabelImage('Schnabel_stehend.png', 'stehend');
-        walkStep = 1;
-        currentDirection = null; 
-    }
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        if (dist < 1) return; // Überspringen, falls schon da
 
-    function moveToTarget(tX, tY) {
-        stopAllTimers(); updateButtonState();
-        const startCoords = getPixelCoordsFromGrid(currentGridPos.x, currentGridPos.y), targetCoords = getPixelCoordsFromGrid(tX, tY);
-        
-        startWalkAnimation(startCoords.x, startCoords.y, targetCoords.x, targetCoords.y);
-
-        const dist = Math.sqrt(Math.pow(targetCoords.x - startCoords.x, 2) + Math.pow(targetCoords.y - startCoords.y, 2));
-        const avgScaleBase = (updateSchnabelVisuals(startCoords.x, startCoords.y) + updateSchnabelVisuals(targetCoords.x, targetCoords.y)) / 2;
+        const avgScaleBase = (updateSchnabelVisuals(startPxX, startPxY) + updateSchnabelVisuals(targetCoords.x, targetCoords.y)) / 2;
         const duration = (dist * 6) / avgScaleBase; 
         
         let startTime = null;
@@ -578,15 +590,23 @@
         function animate(time) {
             if (!startTime) startTime = time;
             const progress = Math.min((time - startTime) / duration, 1);
-            updateSchnabelVisuals(startCoords.x + (targetCoords.x - startCoords.x) * progress, startCoords.y + (targetCoords.y - startCoords.y) * progress);
-            if (progress < 1) requestAnimationFrame(animate);
-            else {
-                currentGridPos = { x: tX, y: tY }; isMoving = false; clearInterval(walkInterval);
+            
+            updateSchnabelVisuals(startPxX + dx * progress, startPxY + dy * progress);
+            
+            if (progress < 1) {
+                moveAnimFrame = requestAnimationFrame(animate);
+            } else {
+                currentGridPos = { x: tX, y: tY }; 
+                targetGridPos = { x: tX, y: tY };
+                isMoving = false; 
+                moveAnimFrame = null;
+                clearInterval(walkInterval);
                 setSchnabelImage('Schnabel_stehend.png', 'stehend');
-                updateButtonState(); startIdleTimer();
+                updateButtonState(); 
+                startIdleTimer();
             }
         }
-        requestAnimationFrame(animate);
+        moveAnimFrame = requestAnimationFrame(animate);
     }
 
     fields.forEach(field => {
@@ -607,14 +627,16 @@
             
             setTimeout(() => xMark.remove(), 500);
 
-            if (isMoving || isDigging || showingResult || dugFields.size >= 3 || schnabel.dataset.sprite === 'kritzelnd' || schnabel.dataset.sprite === 'haltend') return;
+            // "isMoving" wurde aus der Sperre entfernt, damit man ihn umleiten kann!
+            if (isDigging || showingResult || dugFields.size >= 3 || schnabel.dataset.sprite === 'kritzelnd' || schnabel.dataset.sprite === 'haltend') return;
 
             const tX = parseInt(field.dataset.x);
             const tY = parseInt(field.dataset.y);
 
-            if(tX === currentGridPos.x && tY === currentGridPos.y) return;
+            // Verhindert das Neuladen der Animation, wenn er eh schon exakt dahin unterwegs ist
+            if(tX === targetGridPos.x && tY === targetGridPos.y) return;
 
-            isMoving = true; 
+            targetGridPos = { x: tX, y: tY };
             moveToTarget(tX, tY);
         });
     });
