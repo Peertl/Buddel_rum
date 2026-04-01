@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Buddel rum! (v0.52 - Loch- & Sprite-Fix)</title>
+    <title>Buddel rum! (v0.53 - Perfekter Sitz & kleines Loch)</title>
     <style>
         /* Deaktiviert den blauen Klick-Schein auf mobilen Geräten */
         * { -webkit-tap-highlight-color: transparent; }
@@ -81,14 +81,13 @@
         /* EBENEN-LOGIK, POSITION UND ANIMATION DES LOCHS */
         .loch-img {
             position: absolute; 
-            /* HIER POSITIONIEREN: Mittig (left 68%) und an der Spitze des Feldes (top 48%) */
-            left: 68%;   
+            /* HIER POSITIONIEREN: Noch weiter rechts und noch kleiner */
+            left: 78%;   
             top: 48%; 
-            width: 75px; /* Kleiner gemacht (war 90px) */
+            width: 55px; 
             pointer-events: none; z-index: 15; 
-            transition: transform 0.2s ease-out; /* Lässt das Loch weich wachsen! */
+            transition: transform 0.2s ease-out; 
             
-            /* Wachstums-Ankerpunkt zentriert am oberen Rand */
             transform-origin: top center; 
         }
         .loch-img.latest-dug { z-index: 25; }
@@ -109,13 +108,17 @@
         #schnabel[data-sprite^="laufend_zurück"] { --scale-correction: 0.96; }
         #schnabel[data-sprite="kritzelnd"], #schnabel[data-sprite="haltend"] { --scale-correction: 0.80; }
         
-        /* Buddeln und Reaktionen getrennt, um das "Springen" zu beheben */
+        /* Buddeln zentriert */
         #schnabel[data-sprite^="buddelnd"] { --shift-x: -50%; --scale-correction: 0.80; }
         
-        /* Durch Eimer/Schaufel verschiebt sich der Mittelpunkt des Bildes. 
-           Mit -45% und 2% shift-y wird das Bild passend zum Buddeln ausgerichtet. */
-        #schnabel[data-sprite="hurra"] { --shift-x: -45%; --shift-y: 2%; --scale-correction: 0.80; }
-        #schnabel[data-sprite="enttaeuscht"] { --shift-x: -45%; --shift-y: 2%; --scale-correction: 0.80; }
+        /* Enttäuscht und Hurra: Durch Eimer/Schaufel an den Seiten verschiebt sich die Bildmitte.
+           Mit -35% schieben wir das Bild so, dass der Körper am alten Platz (Eimer als Referenz) bleibt. */
+        #schnabel[data-sprite="hurra"],
+        #schnabel[data-sprite="enttaeuscht"] { 
+            --shift-x: -35%; 
+            --shift-y: 1%; 
+            --scale-correction: 0.80; 
+        }
 
         /* Overlay Styles (General) */
         .overlay-layer {
