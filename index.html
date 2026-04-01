@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Buddel rum! (v0.49 - Enttäuschte Niete)</title>
+    <title>Buddel rum! (v0.51 - Spezifische Freude, Lauf-Fix, Loch-Rechts)</title>
     <style>
         /* Deaktiviert den blauen Klick-Schein auf mobilen Geräten */
         * { -webkit-tap-highlight-color: transparent; }
@@ -271,7 +271,6 @@
         'Kanope_C3PO_Stil-2.png', 'Kanope_Dino_Stil-2.png', 'No_Fritteuse.png', 'Relief_Ailiens_Dino.png', 'Rosetta_un.png',
         'Relief_Herbertep.png', 'Kanope_Herbertep_Stil-2.png', 'Herbertep.png', 'Dinosaurier.png',
         'Buddel-Rum-Logo.png', 
-        // Neu: Enttäuschtes Sprite und neues Loch
         'Buddel-Bursche_enttaeuscht.png', 'Loch_v2.png'
     ];
     let loadedImages = 0;
@@ -478,12 +477,11 @@
         const currentScale = updateSchnabelVisuals(coords.x, coords.y);
         
         const loch = document.createElement('img');
-        // Neu: Das neue tiefe Loch-Bild verwenden!
         loch.src = 'Loch_v2.png'; 
         loch.className = 'loch-img latest-dug';
         latestDugLochElement = loch;
         
-        loch.style.transform = `translateX(-50%) scale(0)`; // Startet unsichtbar
+        loch.style.transform = `translateX(-50%) scale(0)`; 
         
         fieldEl.appendChild(loch);
         
@@ -491,7 +489,6 @@
             step = step === 1 ? 2 : 1; setSchnabelImage(`Buddel-Bursche_buddelnd-${step}.png`, `buddelnd_${step}`);
             elapsed += 500;
             
-            // Loch wächst dynamisch mit der Zeit, bleibt durch translateX mittig!
             if (elapsed === 500) {
                 loch.style.transform = `translateX(-50%) scale(${currentScale * 0.30})`;
             } else if (elapsed === 1500) {
@@ -514,8 +511,8 @@
         const item = findItems[itemKey];
         inventory.push(itemKey);
 
-        // Neu: Logik, ob er sich freut oder enttäuscht ist.
-        if (item.value === 0) {
+        // Neu: Freut sich bei Pergament, enttäuscht bei anderen Nieten.
+        if (item.value === 0 && itemKey !== 'pergament') {
             setSchnabelImage('Buddel-Bursche_enttaeuscht.png', 'enttaeuscht');
         } else {
             setSchnabelImage('Buddel-Bursche-Hurra.png', 'hurra');
@@ -618,15 +615,19 @@
         clearInterval(walkInterval);
         currentDirection = "";
         
+        // Neu: Logik, ob er seitwärts geht oder zurück.
         if (Math.abs(dx) < 5) { 
-            if (dy < 0) currentDirection = "zurück_rechts"; 
-            else currentDirection = "rechts";               
+            // Fast nur vertikale Bewegung
+            if (dy < 0) currentDirection = "zurück_rechts"; // Nach oben, standard rechts-Rückansicht
+            else currentDirection = "rechts";               // Nach unten, standard rechts-Vorderansicht
         } else if (dx < 0) {
-            if (dy < 0) currentDirection = "zurück_links";  
-            else currentDirection = "links";                
+            // Nach links bewegen
+            if (dy < -20) currentDirection = "zurück_links";  // Signifikant nach oben links
+            else currentDirection = "links";                // Primär nur nach links (auch leicht runter)
         } else {
-            if (dy < 0) currentDirection = "zurück_rechts"; 
-            else currentDirection = "rechts";               
+            // Nach rechts bewegen
+            if (dy < -20) currentDirection = "zurück_rechts"; // Signifikant nach oben rechts
+            else currentDirection = "rechts";               // Primär nur nach rechts (auch leicht runter)
         }
 
         walkStep = 1;
