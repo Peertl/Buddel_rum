@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Buddel rum! (v0.48 - Perfekte Loch-Position)</title>
+    <title>Buddel rum! (v0.49 - Enttäuschte Niete)</title>
     <style>
         /* Deaktiviert den blauen Klick-Schein auf mobilen Geräten */
         * { -webkit-tap-highlight-color: transparent; }
@@ -81,7 +81,7 @@
         /* EBENEN-LOGIK, POSITION UND ANIMATION DES LOCHS */
         .loch-img {
             position: absolute; 
-            /* HIER POSITIONIEREN: Mittig (left 50%) und an der Spitze des Feldes (top 5-10%) */
+            /* HIER POSITIONIEREN: Mittig (left 60%) und an der Spitze des Feldes (top 48%) */
             left: 60%;   
             top: 48%; 
             width: 90px; 
@@ -109,6 +109,8 @@
         #schnabel[data-sprite^="laufend_zurück"] { --scale-correction: 0.96; }
         #schnabel[data-sprite^="buddelnd"], #schnabel[data-sprite="hurra"] { --scale-correction: 0.80; }
         #schnabel[data-sprite="kritzelnd"], #schnabel[data-sprite="haltend"] { --scale-correction: 0.80; }
+        /* Neu: Enttäuschtes Sprite (basiert auf hurra-Sitzpose) */
+        #schnabel[data-sprite="enttaeuscht"] { --scale-correction: 0.80; }
 
         /* Overlay Styles (General) */
         .overlay-layer {
@@ -264,11 +266,13 @@
         'Schnabel_laufend_rechts_1.png', 'Schnabel_laufend_rechts_2.png', 'Schnabel_laufend_zurück_links_1.png',
         'Schnabel_laufend_zurück_links_2.png', 'Schnabel_laufend_zurück_rechts_1.png', 'Schnabel_laufend_zurück_rechts_2.png',
         'Schnabel_rauchend_1.png', 'Schnabel_rauchend_2.png', 'Buddel-Bursche_buddelnd-1.png', 'Buddel-Bursche_buddelnd-2.png',
-        'Buddel-Bursche-Hurra.png', 'Loch_neu.png', 'Währung.png', 'Kanope_Anubis_Stil-1.png', 'Niete.png',
+        'Buddel-Bursche-Hurra.png', 'Währung.png', 'Kanope_Anubis_Stil-1.png', 'Niete.png',
         'Buddel-Bursche_kritzelnd.png', 'Buddel-Bursche_Penoi.png', 'Pergament_Penoi.png', 'Pergament.png',
         'Kanope_C3PO_Stil-2.png', 'Kanope_Dino_Stil-2.png', 'No_Fritteuse.png', 'Relief_Ailiens_Dino.png', 'Rosetta_un.png',
         'Relief_Herbertep.png', 'Kanope_Herbertep_Stil-2.png', 'Herbertep.png', 'Dinosaurier.png',
-        'Buddel-Rum-Logo.png' 
+        'Buddel-Rum-Logo.png', 
+        // Neu: Enttäuschtes Sprite und neues Loch
+        'Buddel-Bursche_enttaeuscht.png', 'Loch_v2.png'
     ];
     let loadedImages = 0;
     
@@ -474,13 +478,11 @@
         const currentScale = updateSchnabelVisuals(coords.x, coords.y);
         
         const loch = document.createElement('img');
-        loch.src = 'Loch_neu.png'; 
+        // Neu: Das neue tiefe Loch-Bild verwenden!
+        loch.src = 'Loch_v2.png'; 
         loch.className = 'loch-img latest-dug';
         latestDugLochElement = loch;
         
-        // HIER POSITIONIEREN (Zusatz zu CSS):
-        // translateX zentriert das Loch horizontal genau auf der 50% Linie des CSS 'left' Werts.
-        // Die Skalierung wird für die Animation beigemischt.
         loch.style.transform = `translateX(-50%) scale(0)`; // Startet unsichtbar
         
         fieldEl.appendChild(loch);
@@ -507,13 +509,19 @@
     function finishDigging() {
         dugFields.add(`${currentGridPos.x}-${currentGridPos.y}`);
         
-        setSchnabelImage('Buddel-Bursche-Hurra.png', 'hurra');
-        showingResult = true; updateButtonState();
-
         const fieldEl = document.querySelector(`.field[data-x="${currentGridPos.x}"][data-y="${currentGridPos.y}"]`);
         const itemKey = gameItems[parseInt(fieldEl.dataset.index) - 1];
         const item = findItems[itemKey];
         inventory.push(itemKey);
+
+        // Neu: Logik, ob er sich freut oder enttäuscht ist.
+        if (item.value === 0) {
+            setSchnabelImage('Buddel-Bursche_enttaeuscht.png', 'enttaeuscht');
+        } else {
+            setSchnabelImage('Buddel-Bursche-Hurra.png', 'hurra');
+        }
+        
+        showingResult = true; updateButtonState();
 
         document.getElementById('found-item-img').src = item.img;
         document.getElementById('found-quote').innerText = item.text;
