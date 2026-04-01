@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Buddel rum! (v0.53 - Perfekter Sitz & kleines Loch)</title>
+    <title>Buddel rum! (v0.54 - Maßstabsgetreuer Schnabel)</title>
     <style>
         /* Deaktiviert den blauen Klick-Schein auf mobilen Geräten */
         * { -webkit-tap-highlight-color: transparent; }
@@ -81,13 +81,12 @@
         /* EBENEN-LOGIK, POSITION UND ANIMATION DES LOCHS */
         .loch-img {
             position: absolute; 
-            /* HIER POSITIONIEREN: Noch weiter rechts und noch kleiner */
-            left: 78%;   
+            /* Wieder etwas weiter nach links (72% statt 78%) */
+            left: 72%;   
             top: 48%; 
             width: 55px; 
             pointer-events: none; z-index: 15; 
             transition: transform 0.2s ease-out; 
-            
             transform-origin: top center; 
         }
         .loch-img.latest-dug { z-index: 25; }
@@ -111,13 +110,13 @@
         /* Buddeln zentriert */
         #schnabel[data-sprite^="buddelnd"] { --shift-x: -50%; --scale-correction: 0.80; }
         
-        /* Enttäuscht und Hurra: Durch Eimer/Schaufel an den Seiten verschiebt sich die Bildmitte.
-           Mit -35% schieben wir das Bild so, dass der Körper am alten Platz (Eimer als Referenz) bleibt. */
+        /* Enttäuscht und Hurra: Da die Sitz-Bilder flacher sind, bläht die erzwungene 180px-Höhe sie auf.
+           Lösung: Drastisch kleinere Scale (0.55), um es an die Steh-Höhe anzugleichen. */
         #schnabel[data-sprite="hurra"],
         #schnabel[data-sprite="enttaeuscht"] { 
-            --shift-x: -35%; 
-            --shift-y: 1%; 
-            --scale-correction: 0.80; 
+            --shift-x: -42%; 
+            --shift-y: 0%; 
+            --scale-correction: 0.55; 
         }
 
         /* Overlay Styles (General) */
