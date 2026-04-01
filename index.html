@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Buddel rum! (v0.54 - Maßstabsgetreuer Schnabel)</title>
+    <title>Buddel rum! (v0.55 - Die goldene Mitte)</title>
     <style>
         /* Deaktiviert den blauen Klick-Schein auf mobilen Geräten */
         * { -webkit-tap-highlight-color: transparent; }
@@ -81,7 +81,6 @@
         /* EBENEN-LOGIK, POSITION UND ANIMATION DES LOCHS */
         .loch-img {
             position: absolute; 
-            /* Wieder etwas weiter nach links (72% statt 78%) */
             left: 72%;   
             top: 48%; 
             width: 55px; 
@@ -110,13 +109,12 @@
         /* Buddeln zentriert */
         #schnabel[data-sprite^="buddelnd"] { --shift-x: -50%; --scale-correction: 0.80; }
         
-        /* Enttäuscht und Hurra: Da die Sitz-Bilder flacher sind, bläht die erzwungene 180px-Höhe sie auf.
-           Lösung: Drastisch kleinere Scale (0.55), um es an die Steh-Höhe anzugleichen. */
+        /* Enttäuscht und Hurra: Hier ist die Goldene Mitte bei der Skalierung */
         #schnabel[data-sprite="hurra"],
         #schnabel[data-sprite="enttaeuscht"] { 
             --shift-x: -42%; 
-            --shift-y: 0%; 
-            --scale-correction: 0.55; 
+            --shift-y: 2%; 
+            --scale-correction: 1.0; /* <-- Hier kannst du schrauben, wenn es noch nicht 100% passt! */
         }
 
         /* Overlay Styles (General) */
