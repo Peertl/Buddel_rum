@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Buddel rum! (v0.51 - Spezifische Freude, Lauf-Fix, Loch-Rechts)</title>
+    <title>Buddel rum! (v0.52 - Loch- & Sprite-Fix)</title>
     <style>
         /* Deaktiviert den blauen Klick-Schein auf mobilen Geräten */
         * { -webkit-tap-highlight-color: transparent; }
@@ -81,10 +81,10 @@
         /* EBENEN-LOGIK, POSITION UND ANIMATION DES LOCHS */
         .loch-img {
             position: absolute; 
-            /* HIER POSITIONIEREN: Mittig (left 60%) und an der Spitze des Feldes (top 48%) */
-            left: 60%;   
+            /* HIER POSITIONIEREN: Mittig (left 68%) und an der Spitze des Feldes (top 48%) */
+            left: 68%;   
             top: 48%; 
-            width: 90px; 
+            width: 75px; /* Kleiner gemacht (war 90px) */
             pointer-events: none; z-index: 15; 
             transition: transform 0.2s ease-out; /* Lässt das Loch weich wachsen! */
             
@@ -107,10 +107,15 @@
         #schnabel[data-sprite="rauchend_2"] { --shift-x: -50.2%; --shift-y: 2.5%; --scale-correction: 1.03; }
         #schnabel[data-sprite^="laufend"] { --shift-x: -50%; --scale-correction: 1; }
         #schnabel[data-sprite^="laufend_zurück"] { --scale-correction: 0.96; }
-        #schnabel[data-sprite^="buddelnd"], #schnabel[data-sprite="hurra"] { --scale-correction: 0.80; }
         #schnabel[data-sprite="kritzelnd"], #schnabel[data-sprite="haltend"] { --scale-correction: 0.80; }
-        /* Neu: Enttäuschtes Sprite (basiert auf hurra-Sitzpose) */
-        #schnabel[data-sprite="enttaeuscht"] { --scale-correction: 0.80; }
+        
+        /* Buddeln und Reaktionen getrennt, um das "Springen" zu beheben */
+        #schnabel[data-sprite^="buddelnd"] { --shift-x: -50%; --scale-correction: 0.80; }
+        
+        /* Durch Eimer/Schaufel verschiebt sich der Mittelpunkt des Bildes. 
+           Mit -45% und 2% shift-y wird das Bild passend zum Buddeln ausgerichtet. */
+        #schnabel[data-sprite="hurra"] { --shift-x: -45%; --shift-y: 2%; --scale-correction: 0.80; }
+        #schnabel[data-sprite="enttaeuscht"] { --shift-x: -45%; --shift-y: 2%; --scale-correction: 0.80; }
 
         /* Overlay Styles (General) */
         .overlay-layer {
@@ -511,7 +516,6 @@
         const item = findItems[itemKey];
         inventory.push(itemKey);
 
-        // Neu: Freut sich bei Pergament, enttäuscht bei anderen Nieten.
         if (item.value === 0 && itemKey !== 'pergament') {
             setSchnabelImage('Buddel-Bursche_enttaeuscht.png', 'enttaeuscht');
         } else {
@@ -615,19 +619,15 @@
         clearInterval(walkInterval);
         currentDirection = "";
         
-        // Neu: Logik, ob er seitwärts geht oder zurück.
         if (Math.abs(dx) < 5) { 
-            // Fast nur vertikale Bewegung
-            if (dy < 0) currentDirection = "zurück_rechts"; // Nach oben, standard rechts-Rückansicht
-            else currentDirection = "rechts";               // Nach unten, standard rechts-Vorderansicht
+            if (dy < 0) currentDirection = "zurück_rechts"; 
+            else currentDirection = "rechts";               
         } else if (dx < 0) {
-            // Nach links bewegen
-            if (dy < -20) currentDirection = "zurück_links";  // Signifikant nach oben links
-            else currentDirection = "links";                // Primär nur nach links (auch leicht runter)
+            if (dy < -20) currentDirection = "zurück_links";  
+            else currentDirection = "links";                
         } else {
-            // Nach rechts bewegen
-            if (dy < -20) currentDirection = "zurück_rechts"; // Signifikant nach oben rechts
-            else currentDirection = "rechts";               // Primär nur nach rechts (auch leicht runter)
+            if (dy < -20) currentDirection = "zurück_rechts"; 
+            else currentDirection = "rechts";               
         }
 
         walkStep = 1;
